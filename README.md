@@ -9,6 +9,18 @@ Quán bia 2.5D cho TikTok LIVE. Người xem theo dõi chủ quán là chọn b�
 | `index.html`, `assets/` | Bản web tĩnh để mọi người tự vào ngồi, bấm thử quà tại chỗ |
 | `live/` | Bộ phát LIVE: server Node, overlay 9:16, bảng điều khiển |
 
+## Chạy nhanh trên Windows
+
+Nhấp đúp `run.bat` ở thư mục gốc. File sẽ:
+
+1. Kiểm tra Node.js; nếu chưa có hoặc cũ hơn 22.19 thì hỏi có muốn tự cài/nâng cấp Node.js LTS bằng `winget` không.
+2. Tự cài dependency cho `live/` nếu thiếu (chạy `run.bat --reinstall` để cài lại).
+3. Mở server LIVE tại `http://localhost:3000` (bỏ qua nếu cổng đã có server chạy sẵn).
+4. Mở web demo tĩnh tại `http://localhost:4173`.
+5. Chờ server sẵn sàng rồi tự mở web demo và bảng điều khiển `http://localhost:3000/live/control.html`.
+
+Đóng hai cửa sổ server để dừng ứng dụng.
+
 ## Chạy bộ LIVE
 
 Cần Node.js 22.19 trở lên (thư viện `piratetok-live-js` yêu cầu).
