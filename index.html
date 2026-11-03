@@ -1,0 +1,824 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="City Beer Station: quán cơm phở ban ngày, quán bia vỉa hè ban đêm. Vào quán, tặng một hoa hồng lên một ly bia, lắc xúc xắc may mắn.">
+<meta name="theme-color" content="#070b14">
+<meta property="og:title" content="City Beer Station">
+<meta property="og:image" content="assets/city-bg-dark.webp">
+<link rel="preload" as="image" href="assets/city-bg-light.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/city-bg-dark.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/atlas.webp" fetchpriority="high">
+<title>City Beer Station</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap">
+<style>
+/* One 9:16 stage (the street stall) letterboxed in the viewport; the day/night
+   backgrounds, plastic tables and guests are drawn on a canvas; HUD sits on top. */
+:root{
+  --bg:#070b14; --fg:#f6efdf; --muted:#a7b4c9; --amber:#ffb545; --amber2:#ffd98a;
+  --red:#d9473c; --mint:#63e6b0; --panel:rgba(10,17,30,.86); --line:rgba(255,181,69,.34);
+  --display:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%;margin:0}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font-family:var(--display);overflow:hidden;
+  padding-left:max(0px,env(safe-area-inset-left,0px));padding-right:max(0px,env(safe-area-inset-right,0px))}
+#wrap{position:fixed;inset:0;display:grid;place-items:center;padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+#stage{position:relative;aspect-ratio:9/16;height:100%;max-width:100%;max-height:100%;overflow:hidden;background:#05080f;box-shadow:0 0 90px rgba(0,0,0,.85)}
+@media (max-aspect-ratio:9/16){#stage{width:100%;height:auto}}
+#stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:manipulation}
+.hud{position:absolute;z-index:5;pointer-events:none;display:flex;gap:8px;align-items:center}
+.hud *{pointer-events:auto}
+#top{top:10px;left:10px;right:10px;justify-content:space-between;flex-wrap:wrap}
+#bottom{bottom:10px;left:10px;right:10px;justify-content:space-between;flex-wrap:wrap}
+.chip{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:12px;backdrop-filter:blur(8px);display:inline-flex;gap:6px;align-items:center;min-width:0}
+.chip b{font-weight:800;color:var(--amber2)}
+.chip small{font-size:10px;color:var(--muted);letter-spacing:.04em}
+.chip.day{border-color:rgba(255,214,120,.6)}
+.chip.night{border-color:rgba(120,200,255,.45)}
+.n{font-variant-numeric:tabular-nums}
+button{font:inherit;cursor:pointer}
+.btn{background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:999px;padding:7px 12px;font-size:12px;backdrop-filter:blur(8px)}
+.btn:hover{border-color:var(--amber)}
+.btn:focus-visible,input:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+.btn.primary{background:linear-gradient(180deg,#e8533f,#bf3327);border-color:#ff8a6e;color:#fff6e6;padding:12px 20px;font-size:15px;font-weight:800;letter-spacing:.02em}
+.btn.gift{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 10px;border-radius:13px;min-width:66px}
+.btn.gift small{color:var(--muted);font-size:10px;letter-spacing:.04em}
+.btn.gift b{color:var(--amber2);font-size:13px;font-weight:800}
+#gifts{display:flex;gap:6px}
+/* drinker board */
+#board{position:absolute;right:10px;top:52px;z-index:5;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 10px;min-width:154px;font-size:12px;backdrop-filter:blur(8px)}
+#board h3{margin:0 0 4px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--amber);font-weight:800}
+#board ol{margin:0;padding-left:18px;display:grid;gap:2px}
+#board li span{float:right;color:var(--amber2);font-variant-numeric:tabular-nums;margin-left:8px;font-weight:700}
+/* menu board */
+#menu{position:absolute;left:10px;top:52px;z-index:5;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 10px;min-width:150px;font-size:12px;backdrop-filter:blur(8px)}
+#menu h3{margin:0 0 4px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--amber);font-weight:800}
+#menu .mi{display:flex;justify-content:space-between;gap:10px;padding:3px 0}
+#menu .mi+.mi{border-top:1px solid rgba(255,181,69,.22)}
+#menu .mi b{color:var(--amber2);font-variant-numeric:tabular-nums}
+#menu .mn{margin:5px 0 0;font-size:10px;color:var(--muted);line-height:1.4}
+/* chat feed */
+#feed{position:absolute;left:10px;bottom:74px;z-index:4;width:48%;max-width:236px;display:flex;flex-direction:column;gap:5px;pointer-events:none;
+  -webkit-mask-image:linear-gradient(to bottom,transparent,#000 25%);mask-image:linear-gradient(to bottom,transparent,#000 25%)}
+.msg{background:rgba(0,0,0,.5);border-radius:10px;padding:5px 9px;font-size:12px;line-height:1.35;max-width:100%;min-width:0;overflow-wrap:anywhere;animation:in .35s ease-out}
+.msg b{color:var(--amber2);font-weight:700}
+.msg.gift{background:rgba(146,57,20,.66);border:1px solid rgba(255,181,69,.5)}
+@keyframes in{from{opacity:0;transform:translateY(6px)}}
+/* entry */
+#gate{position:absolute;inset:0;z-index:10;display:grid;place-items:center;background:radial-gradient(ellipse at 50% 30%,rgba(255,181,69,.14),rgba(7,11,20,.86) 64%);padding:16px}
+#gate form{width:min(100%,368px);background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:24px 20px;backdrop-filter:blur(12px);display:flex;flex-direction:column;gap:13px;box-shadow:0 24px 70px rgba(0,0,0,.65)}
+#gate h1{font-weight:800;font-size:25px;margin:0;color:var(--amber2);letter-spacing:.01em;text-wrap:balance}
+#gate p{margin:0;color:var(--muted);font-size:13px;line-height:1.55}
+label{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:600}
+input{font:inherit;font-size:16px;padding:11px 13px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.38);color:var(--fg);width:100%;box-sizing:border-box}
+input::placeholder{color:#6f7d92}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.hint{font-size:11px;color:var(--muted)}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{background:rgba(0,0,0,.32);border:1px solid var(--line);color:var(--fg);border-radius:999px;padding:5px 11px;font-size:12px}
+.seg button[aria-pressed="true"]{background:linear-gradient(180deg,#e8533f,#bf3327);border-color:#ff8a6e;color:#fff6e6}
+#toast{position:absolute;left:50%;top:9%;transform:translateX(-50%);z-index:6;background:rgba(10,17,30,.9);border:1px solid var(--line);border-radius:12px;padding:9px 16px;color:var(--amber2);font-size:14px;font-weight:700;opacity:0;transition:opacity .35s;pointer-events:none;max-width:88%;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+#toast.show{opacity:1}
+/* beer card */
+#beerCard{position:absolute;left:50%;top:15%;transform:translate(-50%,10px) scale(.96);z-index:7;width:min(86%,360px);padding:16px 20px;border-radius:18px;border:2px solid var(--amber);
+  background:radial-gradient(ellipse at 50% 0%,rgba(150,70,16,.96),rgba(20,13,8,.96));box-shadow:0 0 50px rgba(255,181,69,.35),0 18px 50px rgba(0,0,0,.5);
+  opacity:0;pointer-events:none;transition:opacity .35s,transform .35s cubic-bezier(.2,1.3,.4,1);text-align:center}
+#beerCard.show{opacity:1;transform:translate(-50%,0) scale(1)}
+.bc-kicker{font-size:11px;letter-spacing:.18em;color:var(--amber);font-weight:800}
+.bc-name{font-size:24px;font-weight:800;color:#fff2d6;margin-top:3px;overflow-wrap:anywhere}
+.bc-amount{font-size:34px;font-weight:800;color:var(--amber2);margin-top:2px;text-shadow:0 0 20px rgba(255,180,70,.55)}
+.bc-total{font-size:12px;color:#e7d6bb;margin-top:3px}
+/* dice card */
+#dice{position:absolute;left:50%;top:14%;transform:translate(-50%,12px) scale(.94);z-index:7;width:min(88%,370px);padding:16px 20px 18px;border-radius:18px;border:2px solid #ffd98a;
+  background:linear-gradient(180deg,rgba(22,30,48,.98),rgba(11,17,30,.98));box-shadow:0 0 60px rgba(99,230,176,.18),0 20px 55px rgba(0,0,0,.55);
+  opacity:0;pointer-events:none;transition:opacity .35s,transform .35s cubic-bezier(.2,1.3,.4,1);text-align:center}
+#dice.show{opacity:1;transform:translate(-50%,0) scale(1)}
+.dz-kicker{font-size:11px;letter-spacing:.2em;color:var(--mint);font-weight:800}
+.dz-name{font-size:22px;font-weight:800;color:#fff2d6;margin:3px 0 10px;overflow-wrap:anywhere}
+.dz-row{display:flex;justify-content:center;gap:10px;margin-bottom:10px}
+.die{width:60px;height:60px;border-radius:12px;background:linear-gradient(160deg,#fffaf0,#f1dfba);box-shadow:inset 0 -3px 0 rgba(120,80,20,.22),0 6px 14px rgba(0,0,0,.35);display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);padding:8px}
+.die i{width:11px;height:11px;border-radius:50%;background:#2a1a0a;align-self:center;justify-self:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
+.dz-label{display:inline-block;font-size:22px;font-weight:800;letter-spacing:.08em;padding:5px 18px;border-radius:999px;color:#241605;background:linear-gradient(180deg,#ffe9a8,#ffc95c)}
+.dz-label.bao{background:linear-gradient(180deg,#ffdf7a,#ff9d2e);box-shadow:0 0 24px rgba(255,170,50,.55)}
+.dz-label.nho{background:linear-gradient(180deg,#e6d8c0,#c9b28c)}
+.dz-bonus{font-size:13px;color:var(--amber2);font-weight:700;margin-top:8px}
+.dz-challenge{font-size:12px;color:#dfe9f5;margin-top:6px;line-height:1.4}
+@media (prefers-reduced-motion:reduce){#toast,#beerCard,#dice,.msg{transition:none;animation:none}}
+#nowPlaying{display:inline-block;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
+</style>
+</head>
+<body>
+
+<div id="wrap"><div id="stage">
+  <canvas id="c"></canvas>
+  <div id="top" class="hud">
+    <span class="chip" id="me" hidden><b id="meName"></b><span class="hint">đang nhậu</span></span>
+    <span class="chip"><span class="n" id="count">0</span><span>khách</span></span>
+    <span class="chip"><span class="n" id="barTotal">0</span><span>xu</span></span>
+    <button class="chip day" id="phaseChip" title="Đổi khung giờ: tự động → ban ngày → ban đêm">☀ <span id="phaseName">Cơm · Phở</span> <small>đổi</small></button>
+  </div>
+  <div id="menu"><h3>Bảng menu</h3><div id="menuRows"></div><p class="mn">1 xu = 1 ly bia · 5 xu = 1 tô phở</p></div>
+  <div id="board" hidden><h3>Bảng nhậu</h3><ol id="boardList"></ol></div>
+  <div id="feed" aria-live="polite"></div>
+  <div id="bottom" class="hud">
+    <span id="gifts" hidden>
+      <button class="btn gift" data-beers="1" data-kind="rose"><b>🌹 Hoa hồng</b><small>1 xu · 1 bia</small></button>
+      <button class="btn gift" data-beers="5" data-kind="beer"><b>🍜 Phở</b><small>5 xu · 1 phở</small></button>
+      <button class="btn gift" data-beers="1" data-kind="dice"><b>🎲 Xúc xắc</b><small>may mắn</small></button>
+      <button class="btn gift" data-beers="20" data-kind="tower"><b>🍻 Đại món</b><small>20 xu · 4 phở</small></button>
+    </span>
+    <span class="row">
+      <button class="btn" id="skinBtn" hidden title="Đổi nhân vật">🎭 Nam</button>
+      <button class="btn" id="nextTrack" hidden title="Bài kế tiếp"><span id="nowPlaying">♪</span> ›</button>
+      <button class="btn" id="mute" hidden aria-pressed="false">Tắt nhạc</button>
+      <button class="btn" id="leave" hidden>Rời quán</button>
+    </span>
+  </div>
+  <div id="beerCard" role="status">
+    <div class="bc-kicker" id="bcKicker">XƯỚNG DANH</div>
+    <div class="bc-name" id="bcName"></div>
+    <div class="bc-amount" id="bcAmount"></div>
+    <div class="bc-total" id="bcTotal"></div>
+  </div>
+  <div id="dice" role="status">
+    <div class="dz-kicker">XÚC XẮC MAY MẮN</div>
+    <div class="dz-name" id="dzName"></div>
+    <div class="dz-row" id="dzDice"></div>
+    <div><span class="dz-label" id="dzLabel"></span></div>
+    <div class="dz-bonus" id="dzBonus"></div>
+    <div class="dz-challenge" id="dzChallenge"></div>
+  </div>
+  <div id="toast" role="status"></div>
+  <div id="gate">
+    <form id="gateForm">
+      <h1>City Beer Station</h1>
+      <p id="gateIntro">Ban ngày quán bán cơm · phở, chiều tối dọn bàn nhựa ra sân bán bia. Nhập tên, chọn dáng rồi vào quán. Nút quà bên dưới mô phỏng donation TikTok: 1 xu gọi được 1 ly bia, 5 xu gọi được 1 tô phở.</p>
+      <label for="guestName">Tên của bạn</label>
+      <input id="guestName" name="guestName" maxlength="20" autocomplete="nickname" placeholder="Ví dụ: Minh An, Hải Đăng…" required>
+      <label>Dáng ngồi</label>
+      <div class="seg" id="skin">
+        <button type="button" data-group="male" aria-pressed="true">Nam</button>
+        <button type="button" data-group="female" aria-pressed="false">Nữ</button>
+        <button type="button" data-group="oldman" aria-pressed="false">Ông già</button>
+        <button type="button" data-group="oldwoman" aria-pressed="false">Bà già</button>
+      </div>
+      <div class="row">
+        <button type="submit" class="btn primary">Vào quán</button>
+        <span class="hint">Chạm vào quán để nâng ly.</span>
+      </div>
+      <div class="row">
+        <span class="hint">Thực hiện bởi BEAR DEV · bản fork MIT</span>
+      </div>
+      <div class="row">
+        <span class="hint" id="voiceInfo">Đang tìm giọng đọc tiếng Việt…</span>
+      </div>
+    </form>
+  </div>
+</div></div>
+
+<script src="assets/bar-sound.js"></script>
+<script src="assets/audio-player.js"></script>
+<script src="assets/sprites.js"></script>
+<script src="assets/beer-fx.js"></script>
+<script src="assets/scene.js"></script>
+<script>
+/* ==========================================================
+   Beer garden: day/night street backgrounds + plastic tables + guests.
+   Stage space is 1080x1920; everything below is in that space.
+   ========================================================== */
+const SW = 1080, SH = 1920;
+const canvas = document.getElementById('c'), ctx = canvas.getContext('2d');
+const A = {};
+for (const [key, src] of [['light', 'assets/city-bg-light.webp'], ['dark', 'assets/city-bg-dark.webp']]){
+  const im = new Image(); im.src = src; A[key] = im;
+}
+const SP = BeerSprites.create('assets/');
+const SC = BeerScene;
+const spriteH = key => SP.dim(key).h || (key.startsWith('walk_') ? 760 : 420);
+
+/* ---- world: 24 seats = 6 plastic tables, 2 near + 2 far per table ---- */
+let world = SC.layout(24), cap = world.cap;
+const visitors = new Map();
+const freeSeat = () => world.seats.find(s => !s.taken);
+const liveCount = () => { let n = 0; for (const v of visitors.values()) if (!v.leaving) n++; return n; };
+let phaseMode = 'auto', activity = 'beer', night = 1, nightTarget = 1, phaseKey = '';
+const clock = { foodFrom: 5, beerFrom: 16, phaseMode };
+
+function startWalkIn(v){
+  const s = v.seat.scale, feetY = v.seat.y + SC.WALK_HIP * s;
+  const lane = v.seat.x < 540 ? 44 : 1036;
+  v.state = 'walk'; v.x = lane; v.y = 2120; v.fade = .15; v.walkPhase = 0;
+  v.path = [{ x: lane, y: feetY }, { x: v.seat.x, y: feetY }];
+}
+function startLeave(v){
+  if (!v || v.leaving) return;
+  v.leaving = true; v.seat.taken = null; v.bubble = null;
+  if (v.state === 'walk'){ visitors.delete(v.id); updateCount(); return; }
+  if (v.side === 'near'){
+    const s = v.seat.scale, feetY = v.seat.y + SC.WALK_HIP * s;
+    const lane = v.seat.x < 540 ? 44 : 1036;
+    v.state = 'leave'; v.x = v.seat.x; v.y = feetY; v.walkPhase = 0;
+    v.path = [{ x: lane, y: feetY }, { x: lane, y: 2140 }];
+  } else {
+    v.state = 'fadeout';
+  }
+  updateCount(); renderBoard();
+}
+function addVisitor(name, skin, instant, isMe){
+  const seat = freeSeat();
+  if (!seat) return null;
+  const v = {
+    id: 'g' + (++addVisitor.seq), name, skin, isMe: !!isMe,
+    seat, side: seat.side, state: 'sit', x: seat.x, y: seat.y, fade: instant ? 1 : 0, pop: instant ? 1 : .4,
+    glow: 0, cheer: 0, sip: 0, nextSip: 3 + Math.random() * 12, bubble: null, phase: Math.random() * 6.28,
+    beers: 0, activity, lastActivity: null, poseMix: 1, walkPhase: 0, leaving: false,
+  };
+  seat.taken = v;
+  visitors.set(v.id, v);
+  if (!instant) startWalkIn(v);
+  updateCount(); renderBoard();
+  return v;
+}
+addVisitor.seq = 0;
+const countEl = document.getElementById('count'), totalEl = document.getElementById('barTotal');
+let totalBeers = 0;
+function updateCount(){ countEl.textContent = liveCount(); }
+function updateTotal(){ totalEl.textContent = totalBeers; }
+
+/* demo crowd so the stall never opens empty */
+const DEMO = ['Minh An','Hải Đăng','Thu Hà','Quốc Bảo','Ngọc Lan','Tuấn Kiệt','Mai Linh','Đức Anh','Phương Thảo','Trung Kiên','Bảo Ngọc','Hoàng Nam','Lan Anh','Văn Hùng','Thanh Tùng','Kim Chi'];
+const SKINS = ['man', 'woman', 'uncle', 'cap', 'sexy', 'oldwoman'];
+DEMO.forEach((n, i) => { const v = addVisitor(n, SKINS[i % SKINS.length], true); v.beers = [42, 31, 24, 18, 15, 12, 9, 7, 5, 4, 3, 2, 1, 1, 1, 0][i] || 0; });
+for (const v of visitors.values()) totalBeers += v.beers;
+updateTotal();
+
+/* ---- audio: live band + crowd murmur + synthesized clink / pour / dice ---- */
+let AC = null, master = null, muted = false, me = null, noiseBuf = null, crowd = null, street = null;
+const player = new BarAudio.MusicPlayer({ manifestUrl: 'assets/music/library.json', storageKey: 'barMusic', fadeIn: 3.2 });
+const nowPlayingEl = document.getElementById('nowPlaying');
+player.onTrack(({ track }) => { if (nowPlayingEl){ nowPlayingEl.textContent = track ? '♪ ' + track.title : '♪'; nowPlayingEl.title = track?.title || ''; } });
+function audioStart(){
+  if (AC) return;
+  AC = new (window.AudioContext || window.webkitAudioContext)();
+  master = AC.createGain(); master.gain.value = .85; master.connect(AC.destination);
+  noiseBuf = AC.createBuffer(1, AC.sampleRate * 1.2, AC.sampleRate);
+  const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  crowd = new BarSound.Crowd(AC, master); crowd.start();
+  crowd.level = .55 + Math.min(1, visitors.size / 40) * .45;
+  street = new BarSound.Street(AC, master, { base: 'assets/audio/' });
+  street.start(); street.setLevel(crowd.level);
+  player.attach(AC, master); player.start();
+}
+function noise(t, dur, freq, q, gain){
+  if (!AC) return;
+  const src = AC.createBufferSource(); src.buffer = noiseBuf;
+  const bp = AC.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = freq; bp.Q.value = q;
+  const g = AC.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(gain, t + .012); g.gain.exponentialRampToValueAtTime(.0008, t + dur);
+  src.connect(bp); bp.connect(g); g.connect(master); src.start(t); src.stop(t + dur + .05);
+}
+function ping(t, freq, dur, gain){
+  if (!AC) return;
+  const o = AC.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(freq, t);
+  const g = AC.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(gain, t + .008); g.gain.exponentialRampToValueAtTime(.0005, t + dur);
+  o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + .05);
+}
+function sfxClink(big){
+  if (!AC || muted) return; const t = AC.currentTime;
+  ping(t, big ? 1580 : 1980, .38, .16); ping(t + .035, big ? 2240 : 2680, .3, .11);
+  noise(t, .07, 3200, 2.5, .06);
+}
+function sfxPour(){ if (!AC || muted) return; const t = AC.currentTime; noise(t, .55, 1400, 1.1, .10); noise(t + .1, .4, 2400, 1.4, .06); }
+function sfxDice(){ if (!AC || muted) return; const t = AC.currentTime; for (let i = 0; i < 7; i++) noise(t + i * .055, .06, 1800 + Math.random() * 1800, 3, .07); }
+function sfxCheer(){ if (!AC || muted) return; const t = AC.currentTime; sfxClink(true); ping(t + .08, 660, .5, .05); ping(t + .12, 880, .5, .045); ping(t + .16, 1320, .45, .04); crowd?.cheer(1); }
+function setDuck(on){ player.duck(on); crowd?.duck(on); street?.duck(on); }
+
+// Vietnamese browser voice for join / gift lines
+let viVoice = null, ttsWarned = false;
+function pickViVoice(){
+  try {
+    const vs = speechSynthesis.getVoices().filter(v => /^vi([-_]|$)/i.test(v.lang));
+    const rank = v => (/natural|online|neural/i.test(v.name) ? 4 : 0) + (/hoaimy|namminh/i.test(v.name) ? 2 : 0) + (/google/i.test(v.name) ? 1 : 0);
+    viVoice = vs.sort((a, b) => rank(b) - rank(a))[0] || null;
+  } catch { viVoice = null; }
+  const el = document.getElementById('voiceInfo');
+  if (el) el.textContent = viVoice ? 'Giọng đọc: ' + viVoice.name : 'Máy này chưa có giọng đọc tiếng Việt: lời chào chỉ hiện chữ.';
+}
+if ('speechSynthesis' in window){ pickViVoice(); speechSynthesis.addEventListener('voiceschanged', pickViVoice); }
+function ttsSpeak(text){
+  try {
+    if (!('speechSynthesis' in window)) return;
+    if (!viVoice) pickViVoice();
+    if (!viVoice){ if (!ttsWarned){ ttsWarned = true; say('Hệ thống', ' Máy này chưa có giọng tiếng Việt nên không đọc thành tiếng.'); } return; }
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.voice = viVoice; u.lang = viVoice.lang; u.rate = 1.02; u.pitch = 1.02;
+    u.onstart = () => setDuck(true); u.onend = u.onerror = () => setDuck(false);
+    speechSynthesis.speak(u);
+  } catch {}
+}
+
+/* ---- feed, toast, drinker board ---- */
+const feed = document.getElementById('feed'), toast = document.getElementById('toast');
+function say(name, text, gift){
+  const d = document.createElement('div');
+  d.className = 'msg' + (gift ? ' gift' : '');
+  const b = document.createElement('b'); b.textContent = name; d.append(b, ' ', text);
+  feed.append(d); while (feed.children.length > 7) feed.firstChild.remove();
+}
+function showToast(t){
+  if (document.querySelector('#beerCard.show,#diceCard.show')) return;
+  toast.textContent = t; toast.classList.add('show'); clearTimeout(showToast._t); showToast._t = setTimeout(() => toast.classList.remove('show'), 3800);
+}
+/* menu board: prices come from the shared scene module */
+(function renderMenu(){
+  const box = document.getElementById('menuRows');
+  for (const item of SC.MENU){
+    const row = document.createElement('div'); row.className = 'mi';
+    const a = document.createElement('span'); a.textContent = `${item.icon} ${item.label}`;
+    const b = document.createElement('b'); b.textContent = `${item.coins} xu`;
+    row.append(a, b); box.append(row);
+  }
+})();
+function renderBoard(){
+  const top = [...visitors.values()].filter(v => !v.leaving && v.beers > 0).sort((a, b) => b.beers - a.beers).slice(0, 3);
+  const ol = document.getElementById('boardList'); ol.innerHTML = '';
+  for (const v of top){
+    const li = document.createElement('li'); li.textContent = v.name;
+    const s = document.createElement('span'); s.textContent = v.beers + ' xu';
+    li.append(s); ol.append(li);
+  }
+  document.getElementById('board').hidden = top.length === 0;
+}
+renderBoard();
+
+/* ---- gift cards ---- */
+const beerCard = document.getElementById('beerCard');
+let beerHide = null;
+const KIND_KICKER = { rose: '🌹 HOA HỒNG', beer: '🍺 GỌI MÓN', dice: '🎲 XÚC XẮC', tower: '🍻 ĐẠI MÓN' };
+function showBeerCard(v, order, kind){
+  document.getElementById('bcKicker').textContent = KIND_KICKER[kind] || 'GỌI MÓN';
+  document.getElementById('bcName').textContent = v.name;
+  document.getElementById('bcAmount').textContent = order.label;
+  document.getElementById('bcTotal').textContent = `đã gọi ${order.text} · tổng ${v.beers} xu`;
+  toast.classList.remove('show');
+  beerCard.classList.add('show');
+  clearTimeout(beerHide);
+  beerHide = setTimeout(() => beerCard.classList.remove('show'), order.coins >= 20 ? 6500 : 4600);
+}
+
+const PIPS = {
+  1: [[2, 2]], 2: [[1, 1], [3, 3]], 3: [[1, 1], [2, 2], [3, 3]],
+  4: [[1, 1], [3, 1], [1, 3], [3, 3]],
+  5: [[1, 1], [3, 1], [2, 2], [1, 3], [3, 3]],
+  6: [[1, 1], [3, 1], [1, 2], [3, 2], [1, 3], [3, 3]],
+};
+const diceCard = document.getElementById('dice');
+let diceHide = null;
+function showDiceCard(v, d, label, cls, bonus, challenge){
+  document.getElementById('dzName').textContent = v.name;
+  const box = document.getElementById('dzDice'); box.replaceChildren();
+  for (const value of d){
+    const die = document.createElement('div'); die.className = 'die';
+    for (const [r, c] of PIPS[value]){ const pip = document.createElement('i'); pip.style.gridArea = `${r}/${c}`; die.append(pip); }
+    box.append(die);
+  }
+  const lab = document.getElementById('dzLabel'); lab.textContent = label; lab.className = 'dz-label ' + cls;
+  document.getElementById('dzBonus').textContent = bonus > 0 ? `Thưởng +${bonus} bia` : 'Không thưởng thêm — vẫn vui!';
+  document.getElementById('dzChallenge').textContent = challenge;
+  toast.classList.remove('show');
+  diceCard.classList.add('show');
+  clearTimeout(diceHide);
+  diceHide = setTimeout(() => diceCard.classList.remove('show'), 9000);
+}
+
+/* ---- serving beer ---- */
+const CHALLENGES = [
+  'Mời người bên trái một ly.', 'Uống cạn trong một hơi.', 'Cả bàn cùng nâng ly.', 'Chia ly cho người đối diện.',
+  'Hát một câu rồi uống.', 'Chọn người kế tiếp mời bia.', 'Kể một câu chuyện vui rồi dzô.', 'Cụng ly với người gần nhất.',
+];
+function rollDice(v, base = 1){
+  if (!v) return;
+  const d = [1, 2, 3].map(() => 1 + Math.floor(Math.random() * 6));
+  const sum = d.reduce((a, b) => a + b, 0);
+  let label, cls, bonus;
+  if (d[0] === d[1] && d[1] === d[2]){ label = 'BÃO!'; cls = 'bao'; bonus = 3; }
+  else if (sum >= 15){ label = 'TAY CHƠI'; cls = 'lon'; bonus = 2; }
+  else if (sum >= 9){ label = 'CHUẨN BÀI'; cls = 'thuong'; bonus = 1; }
+  else { label = 'NON'; cls = 'nho'; bonus = 0; }
+  const challenge = CHALLENGES[Math.floor(Math.random() * CHALLENGES.length)];
+  sfxDice();
+  serveBeer(v, base + bonus, 'dice', false);
+  showDiceCard(v, d, label, cls, bonus, challenge);
+  say(v.name, ` lắc xúc xắc: ${d.join(' · ')} — ${label}`, true);
+  ttsSpeak(`Xin xướng danh ${v.name}, lắc xúc xắc được ${label}. ${challenge} ${bonus > 0 ? 'Thưởng ' + bonus + ' bia.' : ''} Dzô!`);
+  if (cls === 'bao'){ sfxCheer(); street?.cheer(); for (const x of visitors.values()) x.cheer = Math.max(x.cheer, .8); }
+}
+function serveBeer(v, beers, kind, withCard = true){
+  if (!v) return;
+  beers = Math.max(1, Math.round(beers));
+  const order = SC.orderFromCoins(beers);
+  v.beers += beers; totalBeers += beers;
+  v.glow = 1; v.cheer = 1; v.sip = 1; v.nextSip = 8 + Math.random() * 10;
+  const s = v.seat.scale;
+  const y = v.side === 'far' ? v.y - 250 * s : v.y - 300 * s;
+  if (order.bia === 0 && order.pho > 0){
+    const n = Math.min(4, order.pho);
+    for (let i = 0; i < n; i++) floaters.push({ type: 'steam', x: v.x + (v.side === 'far' ? 0 : 40 * s) + (i - (n - 1) / 2) * 52 * s, y: y - 10, vx: (Math.random() - .5) * 16, vy: -(16 + Math.random() * 22), t: 0, life: 2 + Math.random(), s: .8 + Math.random() * .5 });
+    for (let i = 0; i < n; i++) fx.push({ kind: 'bowl', x: v.x + (v.side === 'far' ? 0 : 40 * s) + (i - (n - 1) / 2) * 52 * s, y, t: 0, life: 2.1, s: s * 1.1 });
+  } else {
+    fx.push({ kind: 'mug', x: v.x + (v.side === 'far' ? 0 : 40 * s), y, t: 0, life: beers >= 20 ? 2.8 : 1.9, s: s * (beers >= 20 ? 1.75 : 1.15), tilt: (Math.random() - .5) * .35 });
+    const n = Math.min(26, 5 + beers * 2);
+    for (let i = 0; i < n; i++) floaters.push({ type: 'foam', x: v.x + (Math.random() - .5) * 70 * s, y: y - 10, vx: (Math.random() - .5) * 40, vy: -(45 + Math.random() * 80), t: 0, life: 1.4 + Math.random(), s: .6 + Math.random() * .8 });
+  }
+  if (beers >= 20){
+    sfxCheer(); street?.cheer();
+    for (let i = 0; i < 26; i++) floaters.push({ type: 'hop', x: SW / 2 + (Math.random() - .5) * 620, y: 240 + Math.random() * 320, vx: (Math.random() - .5) * 50, vy: 40 + Math.random() * 60, t: 0, life: 4.5, s: .5 + Math.random() * .5, rot: Math.random() * 6 });
+    for (const x of visitors.values()) x.cheer = Math.max(x.cheer, .7);
+  } else { sfxPour(); if (beers >= 5) sfxClink(); }
+  sfxClink(beers >= 20);
+  if (withCard) showBeerCard(v, order, kind);
+  say(v.name, ` đã gọi ${order.text} · tổng ${v.beers} xu`, true);
+  ttsSpeak(beers >= 20
+    ? `Quá đỉnh! Xin xướng danh ${v.name}, đã gọi ${order.text}. Tổng cộng ${v.beers} xu. Cả quán nâng ly chúc mừng. Dzô dzô dzô!`
+    : `Xin xướng danh ${v.name}, đã gọi ${order.text}. Tổng cộng ${v.beers} xu. Dzô!`);
+  updateTotal(); renderBoard();
+}
+function cheerAll(){
+  for (const v of visitors.values()){ v.cheer = 1; v.sip = 1; }
+  sfxCheer(); street?.cheer();
+  showToast('Cả quán ơi — Một, hai, ba, DZÔ!');
+  ttsSpeak('Cả quán ơi. Một, hai, ba, dzô!');
+  say('Quán', '🥂 Cả quán nâng ly!');
+}
+
+/* ---- phase chip: auto → day → night ---- */
+const phaseChip = document.getElementById('phaseChip'), phaseName = document.getElementById('phaseName');
+const MODE_NEXT = { auto: 'food', food: 'beer', beer: 'auto' };
+const MODE_LABEL = { auto: 'Tự động theo giờ', food: 'Luôn ban ngày', beer: 'Luôn ban đêm' };
+function setPhaseUi(info){
+  phaseKey = info.label;
+  phaseName.textContent = info.label;
+  phaseChip.className = 'chip ' + (info.food ? 'day' : 'night');
+  phaseChip.firstChild.nodeValue = info.food ? '☀ ' : '🌙 ';
+  const hh = String(Math.floor(info.next.at) % 24).padStart(2, '0');
+  phaseChip.title = `${MODE_LABEL[phaseMode]} · chuyển sang ${info.next.label} lúc ${hh}:00 · bấm để đổi`;
+  document.getElementById('gateIntro').textContent = info.food
+    ? 'Buổi sáng trưa quán bán cơm · phở, khách ngồi ăn trong sân. Chiều tối quán dọn bàn nhựa ra bán bia. Nhập tên, chọn dáng rồi vào quán; nút quà bên dưới mô phỏng donation TikTok, mỗi xu gọi được 1 ly bia.'
+    : 'Quán bia vỉa hè ban đêm: bàn ghế nhựa xanh đỏ, đèn dây vàng. Nhập tên, chọn dáng rồi vào quán; nút quà bên dưới mô phỏng donation TikTok: 1 xu = 1 ly bia, 5 xu = 1 tô phở.';
+}
+phaseChip.addEventListener('click', () => {
+  phaseMode = MODE_NEXT[phaseMode];
+  clock.phaseMode = phaseMode;
+  showToast(MODE_LABEL[phaseMode]);
+});
+let phaseAt = 0;
+function tickPhase(now){
+  if (now - phaseAt < 400) return;
+  phaseAt = now;
+  const info = SC.phaseInfo(clock);
+  nightTarget = info.night;
+  if (info.label !== phaseKey) setPhaseUi(info);
+  const act = info.food ? 'food' : 'beer';
+  if (act !== activity){
+    activity = act;
+    for (const v of visitors.values()){
+      if (v.activity === act) continue;
+      v.lastActivity = v.activity; v.activity = act; v.poseMix = 0;
+    }
+  }
+}
+
+/* ---- UI wiring ---- */
+const GROUPS = Object.keys(SC.SKIN_GROUPS);
+let myGroup = 'male', mySkin = randomSkin(myGroup);
+function randomSkin(group){
+  const g = SC.SKIN_GROUPS[group];
+  if (!g) return 'man';
+  const list = g.skins;
+  return list[Math.floor(Math.random() * list.length)];
+}
+function setGroup(group, quiet){
+  myGroup = group;
+  mySkin = randomSkin(group);
+  if (me) me.skin = mySkin;
+  for (const x of document.getElementById('skin').children) x.setAttribute('aria-pressed', x.dataset.group === group);
+  document.getElementById('skinBtn').textContent = '🎭 ' + (SC.SKIN_GROUPS[group].label || 'Đổi hình');
+  if (!quiet && me) showToast('Đổi sang nhóm ' + SC.SKIN_GROUPS[group].label);
+}
+document.getElementById('skin').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  setGroup(b.dataset.group, true);
+});
+document.getElementById('skinBtn').addEventListener('click', () => setGroup(GROUPS[(GROUPS.indexOf(myGroup) + 1) % GROUPS.length]));
+setGroup('male', true);
+const gate = document.getElementById('gate'), form = document.getElementById('gateForm'), input = document.getElementById('guestName');
+try { const s = localStorage.getItem('beerName'); if (s) input.value = s; } catch {}
+form.addEventListener('submit', e => {
+  e.preventDefault();
+  const name = input.value.trim().replace(/\s+/g, ' ').slice(0, 20); if (!name) return;
+  if (!freeSeat()){ showToast('Sân đã đông, chờ một lát nhé.'); return; }
+  try { localStorage.setItem('beerName', name); } catch {}
+  audioStart();
+  me = addVisitor(name, mySkin, false, true);
+  gate.hidden = true;
+  document.getElementById('me').hidden = false; document.getElementById('meName').textContent = name;
+  for (const id of ['mute', 'leave', 'gifts', 'nextTrack', 'skinBtn']) document.getElementById(id).hidden = false;
+  say(name, ' đã vào quán'); showToast('Chào mừng ' + name + ' ghé quán!');
+  ttsSpeak('Chào mừng ' + name + ' vừa ghé quán bia. Chọn một bàn trống và dzô!');
+});
+document.getElementById('gifts').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b || !me) return;
+  if (b.dataset.kind === 'dice') rollDice(me, 1);
+  else serveBeer(me, +b.dataset.beers, b.dataset.kind);
+});
+document.getElementById('nextTrack').addEventListener('click', () => player.next());
+document.getElementById('mute').addEventListener('click', e => {
+  muted = !muted;
+  if (master) master.gain.value = muted ? 0 : .85;
+  e.currentTarget.textContent = muted ? 'Bật nhạc' : 'Tắt nhạc';
+  e.currentTarget.setAttribute('aria-pressed', muted);
+});
+document.getElementById('leave').addEventListener('click', () => {
+  if (me) startLeave(me);
+  me = null; gate.hidden = false;
+  document.getElementById('me').hidden = true;
+  for (const id of ['mute', 'leave', 'gifts', 'nextTrack', 'skinBtn']) document.getElementById(id).hidden = true;
+  player.release(); crowd?.stop(); street?.stop(); crowd = street = null; if (AC){ AC.close(); AC = null; }
+});
+canvas.addEventListener('pointerdown', () => {
+  if (!me) return;
+  me.cheer = 1; me.sip = 1; sfxClink();
+  say(me.name, ' 🥂 Dzô!'); showToast('Dzô!');
+  ttsSpeak('Dzô!');
+});
+
+/* demo traffic: guests walk in and out so the yard keeps moving */
+const EXTRA = ['Hồng Nhung','Duy Khánh','Thùy Linh','Công Thành','Gia Bảo','Yến Nhi','Bích Ngọc','Mạnh Cường','Hà My','Đình Khoa','Tuyết Mai','Việt Anh'];
+setInterval(() => {
+  if (document.hidden || liveCount() >= 20) return;
+  addVisitor(EXTRA[Math.floor(Math.random() * EXTRA.length)], SKINS[Math.floor(Math.random() * SKINS.length)], false);
+}, 7000);
+setInterval(() => {
+  if (document.hidden) return;
+  const list = [...visitors.values()].filter(v => !v.leaving && v !== me && v.beers < 20);
+  if (list.length > 13) startLeave(list[Math.floor(Math.random() * list.length)]);
+}, 11000);
+// demo activity: comments and small gifts from the crowd
+setInterval(() => {
+  if (document.hidden || visitors.size < 2) return;
+  const list = [...visitors.values()].filter(v => !v.leaving);
+  const v = list[Math.floor(Math.random() * list.length)];
+  if (!v || v === me) return;
+  const r = Math.random();
+  if (r < .18){ const o = [[1, 'rose'], [1, 'rose'], [5, 'beer'], [20, 'tower']][Math.floor(Math.random() * 4)]; serveBeer(v, o[0], o[1]); }
+  else if (r < .26) rollDice(v, 1);
+  else { say(v.name, ' ' + ['Dzô!', 'Một hai ba dzô!', 'Món phở ngon quá!', 'Cả quán dzô!', 'Lên đi!', '🥂'][Math.floor(Math.random() * 6)]); v.cheer = .8; }
+}, 5200);
+setInterval(() => { if (!document.hidden && visitors.size) cheerAll(); }, 180000);
+
+/* ---- render ---- */
+let last = performance.now(), frameMs = 16, quality = 1, slowT = 0, fastT = 0, debugEl = null, fpsFrames = 0, fpsAt = performance.now();
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const DEBUG = new URLSearchParams(location.search).has('debug');
+if (DEBUG){ debugEl = document.createElement('div'); debugEl.style.cssText = 'position:fixed;left:8px;top:8px;z-index:99;font:12px ui-monospace,monospace;color:#ffd98a;background:#000a;padding:4px 8px;border-radius:6px'; document.body.append(debugEl); }
+
+const bgCv = document.createElement('canvas'); bgCv.width = SW; bgCv.height = SH;
+const bgG = bgCv.getContext('2d');
+let bgAt = -1, bgAmbAt = -1;
+for (const im of [A.light, A.dark]) im.addEventListener('load', () => { bgAt = -1; });
+function background(mix, t){
+  if (bgAt >= 0 && Math.abs(bgAt - mix) < .004 && t - bgAmbAt < .1) return bgCv;
+  bgAt = mix; bgAmbAt = t;
+  bgG.clearRect(0, 0, SW, SH);
+  if (A.light.naturalWidth) bgG.drawImage(A.light, 0, 0, SW, SH);
+  else { bgG.fillStyle = '#0a101c'; bgG.fillRect(0, 0, SW, SH); }
+  if (mix > .001 && A.dark.naturalWidth){ bgG.globalAlpha = mix; bgG.drawImage(A.dark, 0, 0, SW, SH); bgG.globalAlpha = 1; }
+  SC.drawAmbient(bgG, mix, t);
+  return bgCv;
+}
+function resize(){
+  const r = canvas.getBoundingClientRect(), dpr = Math.min(devicePixelRatio || 1, 2);
+  const w = Math.round(r.width * dpr), h = Math.round(r.height * dpr);
+  if (canvas.width !== w || canvas.height !== h){ canvas.width = w; canvas.height = h; }
+  ctx.setTransform(w / SW, 0, 0, h / SH, 0, 0);
+}
+new ResizeObserver(resize).observe(canvas); resize();
+
+const makeCanvas = (w, h) => { if (typeof OffscreenCanvas !== 'undefined') return new OffscreenCanvas(w, h); const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
+const furnCache = new Map();
+function furnFor(tb, kind){
+  const key = tb.id + '|' + activity + '|' + kind;
+  let e = furnCache.get(key);
+  if (e) return e;
+  const s = tb.scale, w = tb.w, d = tb.depth;
+  const x0 = Math.floor(tb.cx - w * .66 - 24), x1 = Math.ceil(tb.cx + w * .66 + 24);
+  const y0 = Math.floor(tb.y - d - 120 * s), y1 = Math.ceil(tb.y + (kind === 'chair' ? 24 + 150 * s : 40));
+  const cv = makeCanvas(Math.max(1, x1 - x0), Math.max(1, y1 - y0));
+  const g = cv.getContext('2d'); g.translate(-x0, -y0);
+  if (kind === 'chair'){ for (const seat of tb.nearSeats) SC.drawChairBack(g, seat); }
+  else SC.drawTable(g, tb, activity, 0);
+  e = { cv, x: x0, y: y0 };
+  if (furnCache.size > 80) furnCache.clear();
+  furnCache.set(key, e);
+  return e;
+}
+const tagCache = new Map();
+document.fonts?.ready.then(() => tagCache.clear());
+function tagBit(text, s, isMe, beers){
+  const px = Math.max(16, Math.round(26 * s + 10)), pad = px * .42;
+  const ct = beers > 0 ? '×' + beers : '';
+  const key = px + '|' + (isMe ? 1 : 0) + '|' + text + '|' + ct;
+  let tag = tagCache.get(key);
+  if (!tag){
+    ctx.font = `700 ${px}px "Be Vietnam Pro",system-ui,sans-serif`;
+    const nw = ctx.measureText(text).width;
+    ctx.font = `800 ${Math.round(px * .82)}px "Be Vietnam Pro",system-ui,sans-serif`;
+    const cw = ct ? ctx.measureText(ct).width + px * .5 : 0;
+    const w = Math.ceil(nw + cw + pad * 2), h = Math.ceil(px * 1.55), ss = 2;
+    const cv = makeCanvas(w * ss, h * ss), g = cv.getContext('2d');
+    g.scale(ss, ss);
+    g.fillStyle = isMe ? 'rgba(200,63,40,.9)' : 'rgba(8,14,26,.7)';
+    BeerFX.roundRect(g, 0, 0, w, h, h / 2); g.fill();
+    if (isMe){ g.strokeStyle = 'rgba(255,181,69,.95)'; g.lineWidth = 2; g.stroke(); }
+    g.font = `700 ${px}px "Be Vietnam Pro",system-ui,sans-serif`;
+    g.fillStyle = '#f8efdd'; g.textAlign = 'left'; g.textBaseline = 'middle';
+    g.fillText(text, pad, h / 2 + 1);
+    if (ct){
+      g.font = `800 ${Math.round(px * .82)}px "Be Vietnam Pro",system-ui,sans-serif`;
+      g.fillStyle = '#ffcf72'; g.textAlign = 'right';
+      g.fillText(ct, w - pad, h / 2 + 1);
+    }
+    tag = { cv, w, h };
+    if (tagCache.size > 300) tagCache.clear();
+    tagCache.set(key, tag);
+  }
+  return tag;
+}
+const glowCv = document.createElement('canvas'); glowCv.width = glowCv.height = 400;
+{ const g = glowCv.getContext('2d'); const grd = g.createRadialGradient(200, 200, 10, 200, 200, 200); grd.addColorStop(0, 'rgba(255,190,90,.9)'); grd.addColorStop(1, 'rgba(255,150,40,0)'); g.fillStyle = grd; g.fillRect(0, 0, 400, 400); }
+function drawGlow(x, y, s, alpha){ ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = alpha; ctx.drawImage(glowCv, x - 200 * s, y - 200 * s, 400 * s, 400 * s); ctx.restore(); }
+
+const fx = [], floaters = [];
+function drawSeated(v, t){
+  const s = v.seat.scale;
+  const key = SC.activityKey(v.skin, v.activity, v.side);
+  const old = v.lastActivity ? SC.activityKey(v.skin, v.lastActivity, v.side) : null;
+  const jump = v.cheer > 0 ? Math.sin(Math.min(1, v.cheer) * Math.PI) * 14 * s : 0;
+  const bob = (reduce || v.cheer > .05) ? 0 : Math.sin(t * 1.15 + v.phase) * 1.4 * s;
+  const sip = v.sip > 0 ? Math.sin((1 - v.sip) * Math.PI) * 3.5 * s : 0;
+  if (v.glow > 0 || v.beers >= 99) drawGlow(v.x, v.y - 200 * s, s * 1.15, Math.max(v.glow * .7, v.beers >= 99 ? .32 + .08 * Math.sin(t * 1.7) : 0));
+  const y = v.y + bob + sip - jump;
+  ctx.save();
+  if (old && v.poseMix < 1){ ctx.globalAlpha = v.fade * (1 - v.poseMix); SP.draw(ctx, old, v.x, y, s); }
+  ctx.globalAlpha = v.fade * (old ? v.poseMix : 1);
+  SP.draw(ctx, key, v.x, y, s);
+  ctx.restore();
+  if (v.side === 'near' && v.activity === 'beer' && v.sip > 0){
+    const k = Math.sin((1 - v.sip) * Math.PI);
+    SC.drawMug(ctx, v.x + 62 * s, v.y - 236 * s - k * 26 * s, .55 * s);
+  }
+}
+function drawWalker(v){
+  const s = v.seat.scale;
+  const bob = Math.abs(Math.sin(v.walkPhase)) * 4 * s;
+  if (v.glow > 0) drawGlow(v.x, v.y - 400 * s, s * 1.2, v.glow * .55);
+  ctx.save(); ctx.globalAlpha = v.fade;
+  SP.draw(ctx, SC.walkKey(v.skin), v.x, v.y - bob, s);
+  ctx.restore();
+}
+
+const tableGuests = new Map();
+function tick(now){
+  requestAnimationFrame(tick);
+  if (document.hidden){ last = now; return; }
+  const raw = now - last, dt = Math.min(raw / 1000, .05); last = now; const t = now / 1000;
+  frameMs = frameMs * .9 + Math.min(raw, 100) * .1;
+  if (frameMs > 24){ slowT += dt; fastT = 0; } else if (frameMs < 19){ fastT += dt; slowT = 0; }
+  if (slowT > 2){ quality = Math.max(.55, quality - .15); slowT = 0; }
+  else if (fastT > 8 && quality < 1){ quality = Math.min(1, quality + .15); fastT = 0; }
+  fpsFrames++;
+  if (DEBUG && now - fpsAt > 500){ debugEl.textContent = `${Math.round(fpsFrames * 1000 / (now - fpsAt))} fps · ${frameMs.toFixed(1)} ms · ${visitors.size} người · ${totalBeers} ly · ${activity}`; fpsFrames = 0; fpsAt = now; }
+
+  tickPhase(now);
+  night += (nightTarget - night) * Math.min(1, dt * 1.8);
+  if (Math.abs(night - nightTarget) < .002) night = nightTarget;
+
+  for (const v of visitors.values()){
+    v.fade = Math.min(1, v.fade + dt * 2.4);
+    v.pop = Math.min(1, v.pop + dt * 2.6);
+    v.glow = Math.max(0, v.glow - dt * .55);
+    v.cheer = Math.max(0, v.cheer - dt * .8);
+    if (v.poseMix < 1) v.poseMix = Math.min(1, v.poseMix + dt * 1.8);
+    if (v.state === 'sit'){
+      if (v.sip > 0) v.sip = Math.max(0, v.sip - dt / 1.7);
+      else if ((v.nextSip -= dt) <= 0 && !v.leaving){ v.sip = 1; v.nextSip = 8 + Math.random() * 14; }
+    } else if (v.state === 'walk' || v.state === 'leave'){
+      v.walkPhase += dt * 9;
+      const p = v.path[0];
+      if (!p){ if (v.state === 'leave') visitors.delete(v.id); else { v.state = 'sit'; v.x = v.seat.x; v.y = v.seat.y; v.pop = 0; v.poseMix = 1; v.lastActivity = null; v.activity = activity; } continue; }
+      const dx = p.x - v.x, dy = p.y - v.y, d = Math.hypot(dx, dy), step = 330 * dt;
+      if (d <= step){
+        v.x = p.x; v.y = p.y; v.path.shift();
+        if (!v.path.length){
+          if (v.state === 'leave') visitors.delete(v.id);
+          else { v.state = 'sit'; v.x = v.seat.x; v.y = v.seat.y; v.pop = 0; v.poseMix = 1; v.lastActivity = null; v.activity = activity; }
+        }
+      } else { v.x += dx / d * step; v.y += dy / d * step; }
+      if (v.state === 'leave' && v.path.length === 1) v.fade = Math.max(0, v.fade - dt * 1.1);
+    } else if (v.state === 'fadeout'){
+      v.fade = Math.max(0, v.fade - dt * 1.6);
+      if (v.fade <= 0) visitors.delete(v.id);
+    }
+  }
+
+  ctx.clearRect(0, 0, SW, SH);
+  const bg = background(night, t);
+  ctx.drawImage(bg, 0, 0, SW, SH);
+
+  tableGuests.clear();
+  for (const tb of world.tables) tableGuests.set(tb, { far: [], near: [] });
+  for (const v of visitors.values()){
+    if (v.state !== 'sit' || !v.seat) continue;
+    const g = tableGuests.get(v.seat.table);
+    if (g) g[v.seat.side].push(v);
+  }
+  const groups = [];
+  for (const tb of world.tables){
+    const g = tableGuests.get(tb);
+    groups.push({ y: tb.y, draw: () => {
+      for (const v of g.far) drawSeated(v, t);
+      if (tb.kind === 'image'){
+        const p = tb.patch;
+        ctx.drawImage(bg, p.x, p.y, p.w, p.h, p.x, p.y, p.w, p.h);
+        if (g.far.length || g.near.length) SC.drawProps(ctx, tb, activity, t);
+      } else {
+        const f = furnFor(tb, 'table');
+        ctx.drawImage(f.cv, f.x, f.y);
+      }
+      for (const v of g.near) drawSeated(v, t);
+      const ch = furnFor(tb, 'chair');
+      ctx.drawImage(ch.cv, ch.x, ch.y);
+    } });
+  }
+  for (const v of visitors.values()) if (v.state === 'walk' || v.state === 'leave') groups.push({ y: v.y, draw: () => drawWalker(v) });
+  groups.sort((a, b) => a.y - b.y);
+  for (const g of groups) g.draw();
+
+  const tags = [];
+  for (const v of visitors.values()){
+    if (v.fade <= .05) continue;
+    const s = v.seat.scale;
+    const walking = v.state === 'walk' || v.state === 'leave';
+    const key = walking ? SC.walkKey(v.skin) : SC.activityKey(v.skin, v.activity, v.side);
+    const ty = v.y - spriteH(key) * s - 12 * s;
+    const bit = tagBit(v.name, s, v.isMe, v.beers);
+    tags.push({ bit, x: v.x, y: ty, pri: (v.isMe ? 1e9 : 0) + (v.glow > .2 ? 1e7 : 0) + v.y * 10 + v.beers });
+  }
+  tags.sort((a, b) => b.pri - a.pri);
+  const placed = [];
+  for (const t of tags){
+    const x = Math.max(t.bit.w / 2 + 6, Math.min(SW - t.bit.w / 2 - 6, t.x));
+    const r = { x: x - t.bit.w / 2 - 3, y: t.y - t.bit.h / 2 - 3, w: t.bit.w + 6, h: t.bit.h + 6 };
+    if (placed.some(o => r.x < o.x + o.w && o.x < r.x + r.w && r.y < o.y + o.h && o.y < r.y + r.h)) continue;
+    ctx.drawImage(t.bit.cv, x - t.bit.w / 2, t.y - t.bit.h / 2, t.bit.w, t.bit.h);
+    placed.push(r);
+  }
+
+  for (let i = fx.length - 1; i >= 0; i--){
+    const f = fx[i]; f.t += dt; const k = f.t / f.life;
+    if (k >= 1){ fx.splice(i, 1); continue; }
+    const pop = 1 - Math.pow(1 - Math.min(1, f.t * 4), 3);
+    ctx.save(); ctx.globalAlpha = k < .75 ? 1 : (1 - k) / .25;
+    if (f.kind === 'bowl') SC.drawBowl(ctx, f.x, f.y - k * 160, f.s * (.6 + .4 * pop), true, t);
+    else BeerFX.mug(ctx, f.x, f.y - k * 190, f.s * (.6 + .4 * pop), { tilt: f.tilt, fill: 1 });
+    ctx.restore();
+  }
+  for (let i = floaters.length - 1; i >= 0; i--){
+    const p = floaters[i]; p.t += dt; if (p.t > p.life){ floaters.splice(i, 1); continue; }
+    p.x += p.vx * dt + Math.sin(p.t * 3 + i) * 16 * dt; p.y += p.vy * dt;
+    if (p.type === 'foam'){
+      ctx.save(); ctx.globalAlpha = Math.min(1, (p.life - p.t) * 1.3) * .9;
+      ctx.fillStyle = '#fffaf0';
+      ctx.beginPath(); ctx.arc(p.x, p.y, 5 * p.s, 0, 6.29); ctx.fill();
+      ctx.restore();
+    } else if (p.type === 'steam'){
+      SC.drawSteam(ctx, p.x, p.y, p.s, t, Math.min(.8, (p.life - p.t) * .5));
+    } else {
+      ctx.save(); ctx.globalAlpha = Math.min(1, p.life - p.t);
+      BeerFX.hop(ctx, p.x, p.y, p.s, (p.rot || 0) + p.t * 1.6, 1);
+      ctx.restore();
+    }
+  }
+  updateCount();
+}
+const init = SC.phaseInfo(clock);
+night = nightTarget = init.night;
+setPhaseUi(init);
+requestAnimationFrame(tick);
+</script>
+
+</body>
+</html>

@@ -1,0 +1,8 @@
+node_modules/
+live/tts/
+live/avatar-cache/
+*.log
+.env
+.env.*
+.DS_Store
+Thumbs.db

@@ -1,0 +1,33 @@
+{
+  "version": 2,
+  "notes": "Nhạc quán: mục đầu tiên là ban nhạc sống tổng hợp bằng Web Audio (engine \"band\", không cần file). Muốn thêm file: bỏ file vào assets/music/ rồi thêm một mục có src (tương đối với file này). Chỉ dùng bản tự thu, CC0, public domain hoặc CC BY và ghi nguồn vào credit/license.",
+  "categories": [
+    {
+      "id": "quan",
+      "name": "Nhạc quán",
+      "tracks": [
+        {
+          "id": "house-band",
+          "title": "Ban nhạc quán · sôi động",
+          "engine": "band",
+          "credit": "Tổng hợp Web Audio trong dự án",
+          "license": "Tài nguyên của dự án"
+        },
+        {
+          "id": "dem-via-he",
+          "title": "Đêm vỉa hè",
+          "src": "music1.mp3",
+          "credit": "Tạo bằng Gemini cho dự án",
+          "license": "Tài nguyên của dự án"
+        },
+        {
+          "id": "saigon-chill",
+          "title": "Sài Gòn chill",
+          "src": "music2.mp3",
+          "credit": "Tạo bằng Gemini cho dự án",
+          "license": "Tài nguyên của dự án"
+        }
+      ]
+    }
+  ]
+}

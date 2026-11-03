@@ -1,0 +1,21 @@
+{
+  "name": "city-beer-station-bear-live",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "TikTok LIVE beer-garden overlay: one rose, one beer (BEAR DEV fork)",
+  "author": "BEAR DEV",
+  "license": "MIT",
+  "scripts": {
+    "start": "node server.mjs",
+    "assets:key": "node scripts/key-sprites.mjs",
+    "assets:atlas": "node scripts/make-atlas.mjs"
+  },
+  "dependencies": {
+    "msedge-tts": "2.1.1",
+    "piratetok-live-js": "0.3.0",
+    "sharp": "^0.35.5",
+    "ws": "8.18.0"
+  },
+  "devDependencies": {}
+}

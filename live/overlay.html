@@ -1,0 +1,808 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Overlay 9:16 · City Beer Station</title>
+<link rel="preload" as="image" href="/assets/city-bg-light.webp" fetchpriority="high">
+<link rel="preload" as="image" href="/assets/city-bg-dark.webp" fetchpriority="high">
+<link rel="preload" as="image" href="/assets/atlas.webp" fetchpriority="high">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap">
+<style>
+/* Overlay for TikTok LIVE Studio / OBS window capture. Everything sits on a 1080×1920 stage scaled to the window. */
+:root{
+  --bg:#05080f; --fg:#f7f0e1; --muted:#a9b6ca; --amber:#ffb545; --amber2:#ffd98a; --red:#d9473c;
+  --mint:#63e6b0; --panel:rgba(10,17,30,.82); --line:rgba(255,181,69,.5);
+  --display:"Be Vietnam Pro",system-ui,sans-serif;
+  color-scheme:dark;
+}
+html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:var(--display);color:var(--fg)}
+#fit{position:fixed;inset:0;overflow:hidden}
+#stage{position:absolute;left:50%;top:50%;width:1080px;height:1920px;transform-origin:center center;overflow:hidden;background:var(--bg)}
+#c{position:absolute;inset:0;width:1080px;height:1920px}
+.ui{position:absolute;z-index:3}
+/* neon plaque */
+#plaque{left:80px;right:80px;top:62px;height:164px;border:3px solid var(--amber);border-radius:28px;
+  background:linear-gradient(180deg,rgba(17,27,47,.95),rgba(7,12,22,.96));
+  box-shadow:0 0 0 7px rgba(0,0,0,.35),0 0 60px rgba(255,170,70,.28) inset,0 0 60px rgba(255,150,50,.22);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+#plaque::before,#plaque::after{content:"🍺";position:absolute;top:50%;transform:translateY(-50%);font-size:46px;filter:drop-shadow(0 0 14px rgba(255,180,70,.65))}
+#plaque::before{left:36px}#plaque::after{right:36px}
+#title{font-weight:800;font-size:52px;letter-spacing:.06em;color:var(--amber2);text-transform:uppercase;text-shadow:0 0 20px rgba(255,180,70,.45)}
+#subtitle{font-size:26px;letter-spacing:.14em;color:#f4ead7;font-weight:600;text-transform:uppercase}
+/* pills */
+#pills{top:246px;left:0;right:0;display:flex;justify-content:center;gap:14px}
+.pill{background:var(--panel);border:2px solid var(--line);border-radius:999px;padding:10px 22px;font-size:30px;font-weight:800;display:flex;align-items:center;gap:12px;font-variant-numeric:tabular-nums}
+.pill small{font-size:16px;font-weight:600;color:var(--muted);line-height:1.05;text-transform:uppercase;letter-spacing:.06em}
+.pill.day{border-color:rgba(255,214,120,.75);color:#fff3d2}
+.pill.night{border-color:rgba(120,200,255,.55);color:#dcecff}
+.dot{width:18px;height:18px;border-radius:50%;background:#46d36b;box-shadow:0 0 12px #46d36b}
+/* side cards */
+.card{background:var(--panel);border:2px solid var(--line);border-radius:22px;padding:18px 22px;font-size:24px;line-height:1.38;backdrop-filter:blur(4px)}
+#guide{left:22px;top:640px;width:344px;font-size:18px}
+#guide div+div{border-top:1px solid rgba(255,181,69,.28);margin-top:5px;padding-top:5px}
+#guide b{color:var(--amber2)}
+#guide .note{font-size:16px;color:#ffe3b0;line-height:1.3}
+#menu{left:22px;top:862px;width:320px;font-size:19px;padding:12px 18px}
+#menu h3{margin:0 0 5px;font-size:21px;color:var(--amber2);letter-spacing:.06em;font-weight:800;text-transform:uppercase}
+#menu .mi{display:flex;justify-content:space-between;gap:12px;padding:4px 0}
+#menu .mi+.mi{border-top:1px solid rgba(255,181,69,.28)}
+#menu .mi b{color:var(--amber2);font-variant-numeric:tabular-nums}
+#menu .mn{margin:6px 0 0;font-size:17px;color:var(--muted);line-height:1.3}
+#merit{right:22px;top:640px;width:300px;text-align:center}
+#guide,#merit{transition:opacity .4s}
+#stage.card-on #guide,#stage.card-on #merit{opacity:0}
+#merit h3{margin:0 0 8px;font-size:26px;color:var(--amber2);letter-spacing:.06em;font-weight:800;text-transform:uppercase}
+#merit ol{margin:0;padding:0;list-style:none;text-align:left;display:grid;gap:6px}
+#merit li{display:flex;justify-content:space-between;gap:10px}
+#merit li span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#merit li span:last-child{color:var(--amber2);font-variant-numeric:tabular-nums;font-weight:700}
+#merit .empty{color:var(--muted);text-align:center}
+/* cheer banner */
+#cheer{left:90px;right:90px;top:320px;z-index:6;padding:24px 30px;text-align:center;border-radius:26px;border:3px solid var(--amber2);
+  background:linear-gradient(180deg,rgba(160,74,18,.96),rgba(30,14,6,.96));box-shadow:0 0 80px rgba(255,170,60,.4);
+  opacity:0;transform:translateY(24px) scale(.96);transition:opacity .4s,transform .4s cubic-bezier(.2,1.3,.4,1);pointer-events:none}
+#cheer.show{opacity:1;transform:none}
+#cheer b{display:block;font-size:64px;font-weight:800;letter-spacing:.06em;color:#fff2d0;text-shadow:0 0 26px rgba(255,170,60,.6)}
+#cheer span{display:block;font-size:28px;color:#ffe3b0;margin-top:4px}
+/* beer card */
+#beerCard{left:90px;right:90px;top:330px;z-index:7;padding:26px 34px 28px;text-align:center;border-radius:28px;border:3px solid var(--amber2);
+  background:radial-gradient(ellipse at 50% 0%,rgba(158,76,18,.97),rgba(24,12,6,.97));box-shadow:0 0 90px rgba(255,180,80,.45);
+  opacity:0;transform:translateY(24px) scale(.94);transition:opacity .45s,transform .45s cubic-bezier(.2,1.4,.4,1);pointer-events:none}
+#beerCard.show{opacity:1;transform:none}
+.bc-kicker{font-size:23px;letter-spacing:.2em;color:var(--amber);font-weight:800;text-transform:uppercase}
+.bc-name{font-size:56px;font-weight:800;color:#fff2d6;line-height:1.1;margin-top:4px;overflow-wrap:anywhere}
+.bc-amount{font-size:68px;font-weight:800;color:var(--amber2);line-height:1.1;margin-top:2px;text-shadow:0 0 30px rgba(255,180,70,.6)}
+.bc-total{font-size:28px;color:#f2dfc0;margin-top:6px}
+/* dice card */
+#diceCard{left:100px;right:100px;top:330px;z-index:8;padding:28px 36px 30px;text-align:center;border-radius:28px;border:3px solid var(--amber2);
+  background:linear-gradient(180deg,rgba(24,34,56,.98),rgba(9,14,26,.98));
+  box-shadow:0 0 100px rgba(99,230,176,.22),0 0 0 8px rgba(0,0,0,.3);
+  opacity:0;transform:translateY(24px) scale(.94);transition:opacity .45s,transform .45s cubic-bezier(.2,1.4,.4,1);pointer-events:none}
+#diceCard.show{opacity:1;transform:none}
+.dz-kicker{font-size:23px;letter-spacing:.22em;color:var(--mint);font-weight:800;text-transform:uppercase}
+.dz-name{font-size:46px;font-weight:800;color:#fff2d6;margin:4px 0 16px;overflow-wrap:anywhere}
+.dz-row{display:flex;justify-content:center;gap:22px;margin-bottom:18px}
+.die{width:104px;height:104px;border-radius:20px;background:linear-gradient(160deg,#fffaf0,#efdcb6);box-shadow:inset 0 -5px 0 rgba(120,80,20,.22),0 10px 26px rgba(0,0,0,.45);display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);padding:14px}
+.die i{width:19px;height:19px;border-radius:50%;background:#2a1a0a;align-self:center;justify-self:center;box-shadow:inset 0 2px 0 rgba(255,255,255,.3)}
+.dz-label{display:inline-block;font-size:44px;font-weight:800;letter-spacing:.1em;padding:8px 30px;border-radius:999px;color:#241605;background:linear-gradient(180deg,#ffe9a8,#ffc95c)}
+.dz-label.bao{background:linear-gradient(180deg,#ffdf7a,#ff9d2e);box-shadow:0 0 34px rgba(255,170,50,.6)}
+.dz-label.nho{background:linear-gradient(180deg,#e6d8c0,#c9b28c)}
+.dz-bonus{font-size:28px;color:var(--amber2);font-weight:700;margin-top:14px}
+.dz-challenge{font-size:25px;color:#dfe9f5;margin-top:8px;line-height:1.4}
+/* misc */
+#unmute{position:absolute;z-index:9;left:50%;top:1540px;transform:translateX(-50%);font:800 36px var(--display);padding:22px 44px;border-radius:24px;border:3px solid var(--amber2);background:#c0392b;color:#fff4dc;cursor:pointer}
+#conn{position:absolute;z-index:4;right:16px;bottom:12px;font-size:20px;color:var(--muted);opacity:.6}
+@media (prefers-reduced-motion:reduce){#cheer,#beerCard,#diceCard{transition:none}}
+</style>
+</head>
+<body>
+<div id="fit"><div id="stage">
+  <canvas id="c" width="1080" height="1920"></canvas>
+  <div id="plaque" class="ui"><div id="title">City Beer Station</div><div id="subtitle">Một hoa hồng · Một ly bia</div></div>
+  <div id="pills" class="ui">
+    <div class="pill"><span class="dot"></span><span id="count">0/24</span><small>khách<br>trong quán</small></div>
+    <div class="pill">🍺 <span id="total">0</span><small>xu đã<br>dùng</small></div>
+    <div class="pill day" id="phasePill">☀ <span id="phaseName">Cơm · Phở</span></div>
+    <div class="pill">⏱ <span id="timer">00:00:00</span></div>
+  </div>
+  <div id="guide" class="card ui"></div>
+  <div id="menu" class="card ui">
+    <h3>🍽 Bảng menu</h3>
+    <div id="menuRows"></div>
+    <p class="mn">1 xu = 1 ly bia · 5 xu = 1 tô phở</p>
+  </div>
+  <div id="merit" class="card ui"><h3>✦ Bảng nhậu ✦</h3><ol id="meritList"><li class="empty">Chưa có</li></ol></div>
+  <div id="cheer" class="ui"><b>CẢ QUÁN DZÔ!</b><span id="cheerSub">Một, hai, ba…</span></div>
+  <div id="beerCard" class="ui">
+    <div class="bc-kicker" id="bcKicker">XƯỚNG DANH</div>
+    <div class="bc-name" id="bcName"></div>
+    <div class="bc-amount" id="bcAmount"></div>
+    <div class="bc-total" id="bcTotal"></div>
+  </div>
+  <div id="diceCard" class="ui">
+    <div class="dz-kicker">XÚC XẮC MAY MẮN</div>
+    <div class="dz-name" id="dzName"></div>
+    <div class="dz-row" id="dzDice"></div>
+    <div><span class="dz-label" id="dzLabel"></span></div>
+    <div class="dz-bonus" id="dzBonus"></div>
+    <div class="dz-challenge" id="dzChallenge"></div>
+  </div>
+  <button id="unmute">🔔 Bấm để bật âm thanh</button>
+  <div id="conn">đang kết nối…</div>
+</div></div>
+
+<script src="/assets/bar-sound.js"></script>
+<script src="/assets/audio-player.js"></script>
+<script src="/assets/sprites.js"></script>
+<script src="/assets/beer-fx.js"></script>
+<script src="/assets/scene.js"></script>
+<script>
+/* ======================= stage fit ======================= */
+const stage = document.getElementById('stage');
+function fit(){ const s = Math.min(innerWidth / 1080, innerHeight / 1920); stage.style.transform = `translate(-50%,-50%) scale(${s})`; }
+addEventListener('resize', fit); fit();
+
+/* ======================= assets ======================= */
+const A = {};
+for (const [key, src] of [['light', '/assets/city-bg-light.webp'], ['dark', '/assets/city-bg-dark.webp']]){
+  const im = new Image(); im.src = src; A[key] = im;
+}
+const SP = BeerSprites.create('/assets/');
+const SC = BeerScene;
+const avatars = new Map();
+function avatar(url){
+  if (!url) return null;
+  let im = avatars.get(url);
+  if (!im){
+    im = new Image(); im.referrerPolicy = 'no-referrer';
+    im.onerror = () => { if (im._retry) return; im._retry = true; im.src = url; };
+    im.src = '/live/avatar?u=' + encodeURIComponent(url);
+    avatars.set(url, im);
+  }
+  return im.naturalWidth ? im : null;
+}
+const spriteH = key => SP.dim(key).h || (key.startsWith('walk_') ? 760 : 420);
+
+/* ======================= world ======================= */
+let settings = { phaseMode: 'auto', foodFrom: 5, beerFrom: 16, title: 'City Beer Station', subtitle: 'Một hoa hồng · Một ly bia', music: true, musicVolume: 50, musicTrack: '', sfx: true, ambience: true };
+let world = SC.layout(24), cap = world.cap, tables = world.tables;
+const visitors = new Map();
+const freeSeat = () => world.seats.find(s => !s.taken);
+let activity = 'beer', night = 1, nightTarget = 1, phaseKey = '';
+
+function relayout(c){
+  const list = [...visitors.values()].filter(v => !v.leaving);
+  world = SC.layout(c); cap = world.cap; tables = world.tables;
+  furnCache.clear();
+  for (const v of list){
+    const seat = freeSeat();
+    if (!seat){ visitors.delete(v.id); continue; }
+    seat.taken = v;
+    Object.assign(v, { seat, side: seat.side, state: 'sit', x: seat.x, y: seat.y, fade: 1, pop: 1, poseMix: 1, lastActivity: null, activity });
+  }
+  updateCount(); renderMerit();
+}
+
+function startWalkIn(v){
+  const s = v.seat.scale, feetY = v.seat.y + SC.WALK_HIP * s;
+  const lane = v.seat.x < 540 ? 44 : 1036;
+  v.state = 'walk'; v.x = lane; v.y = 2120; v.speed = 330; v.fade = .15; v.walkPhase = 0;
+  v.path = [{ x: lane, y: feetY }, { x: v.seat.x, y: feetY }];
+}
+function startLeave(v){
+  if (!v || v.leaving) return;
+  v.leaving = true; v.seat.taken = null; v.bubble = null;
+  if (v.state === 'walk'){ visitors.delete(v.id); updateCount(); renderMerit(); return; }
+  v.leaving = true;
+  if (v.side === 'near'){
+    const s = v.seat.scale, feetY = v.seat.y + SC.WALK_HIP * s;
+    const lane = v.seat.x < 540 ? 44 : 1036;
+    v.state = 'leave'; v.x = v.seat.x; v.y = feetY; v.walkPhase = 0;
+    v.path = [{ x: lane, y: feetY }, { x: lane, y: 2140 }];
+  } else {
+    v.state = 'fadeout';
+  }
+  updateCount(); renderMerit();
+}
+function removeVisitor(id){ startLeave(visitors.get(id)); }
+
+function addVisitor(p, instant){
+  const ex = visitors.get(p.id);
+  if (ex){
+    Object.assign(ex, { name: p.name, skin: p.skin, avatar: p.avatar || ex.avatar || '', beers: p.beers, followed: !!p.followed });
+    return ex;
+  }
+  const seat = freeSeat();
+  if (!seat) return null;
+  const v = {
+    id: p.id, name: p.name, skin: SC.SKINS.includes(p.skin) ? p.skin : 'man', avatar: p.avatar || '', beers: p.beers || 0,
+    seat, side: seat.side, state: 'sit', x: seat.x, y: seat.y, fade: instant ? 1 : 0, pop: instant ? 1 : .4,
+    glow: 0, cheer: 0, sip: 0, nextSip: 4 + Math.random() * 10, bubble: null, phase: Math.random() * 6.28,
+    activity, lastActivity: null, poseMix: 1, walkPhase: 0, leaving: false,
+  };
+  seat.taken = v;
+  visitors.set(p.id, v);
+  if (!instant) startWalkIn(v);
+  updateCount(); renderMerit();
+  return v;
+}
+
+/* ======================= HUD ======================= */
+let startedAt = Date.now(), totalBeers = 0;
+const liveCount = () => { let n = 0; for (const v of visitors.values()) if (!v.leaving) n++; return n; };
+const crowdLevel = () => .5 + Math.min(1, liveCount() / 40) * .5;
+function updateTotal(){ document.getElementById('total').textContent = totalBeers; }
+function updateCount(){ document.getElementById('count').textContent = `${liveCount()}/${cap}`; crowd?.setLevel(crowdLevel()); street?.setLevel(crowdLevel()); }
+function renderMerit(){
+  const top = [...visitors.values()].filter(v => !v.leaving && v.beers > 0).sort((a, b) => b.beers - a.beers).slice(0, 5);
+  const ol = document.getElementById('meritList'); ol.innerHTML = '';
+  if (!top.length){ ol.innerHTML = '<li class="empty">Chưa có</li>'; return; }
+  top.forEach((v, i) => {
+    const li = document.createElement('li');
+    const a = document.createElement('span'); a.textContent = `${i + 1}. ${v.name}`;
+    const b = document.createElement('span'); b.textContent = v.beers + ' xu';
+    li.append(a, b); ol.append(li);
+  });
+}
+setInterval(() => {
+  const s = Math.floor((Date.now() - startedAt) / 1000);
+  document.getElementById('timer').textContent = [s / 3600, s / 60 % 60, s % 60].map(x => String(Math.floor(x)).padStart(2, '0')).join(':');
+}, 1000);
+
+/* ======================= day / night ======================= */
+function setPhase(info){
+  phaseKey = info.label;
+  document.getElementById('phaseName').textContent = info.label;
+  const pill = document.getElementById('phasePill');
+  pill.className = 'pill ' + (info.food ? 'day' : 'night');
+  pill.firstChild.nodeValue = info.food ? '☀ ' : '🌙 ';
+  const hh = String(Math.floor(info.next.at) % 24).padStart(2, '0');
+  pill.title = `Chuyển sang ${info.next.label} lúc ${hh}:00`;
+  document.getElementById('guide').innerHTML = info.food
+    ? '<div>☀ <b>Cơm · Phở</b> ban ngày</div><div>❤ <b>Theo dõi chủ quán</b> để vào</div><div>💬 Gõ <b>nam/nữ/ông già/bà già</b> để đổi dáng</div><div class="note">🎁 Tặng quà để được <b>xướng tên</b></div>'
+    : '<div>🌙 <b>Nhậu</b> ban đêm</div><div>❤ <b>Theo dõi chủ quán</b> để vào</div><div>💬 Gõ <b>nam/nữ/ông già/bà già</b> để đổi dáng</div><div class="note">🎁 Tặng quà để được <b>xướng tên</b></div>';
+}
+let phaseAt = 0;
+function tickPhase(now){
+  if (now - phaseAt < 400) return;
+  phaseAt = now;
+  const info = SC.phaseInfo(settings);
+  nightTarget = info.night;
+  if (info.label !== phaseKey) setPhase(info);
+  const act = info.food ? 'food' : 'beer';
+  if (act !== activity){
+    activity = act;
+    for (const v of visitors.values()){
+      if (v.activity === act) continue;
+      v.lastActivity = v.activity; v.activity = act; v.poseMix = 0;
+    }
+  }
+}
+function applySettings(){
+  document.getElementById('title').textContent = settings.title || 'City Beer Station';
+  document.getElementById('subtitle').textContent = settings.subtitle || 'Một hoa hồng · Một ly bia';
+  player.setEnabled(settings.music !== false);
+  if (settings.musicVolume !== undefined) player.setVolume((Number(settings.musicVolume) || 0) / 100);
+  if (settings.musicTrack && player.current?.id !== settings.musicTrack) player.playTrack(settings.musicTrack);
+  crowd?.setEnabled(settings.ambience !== false);
+  street?.setEnabled(settings.ambience !== false);
+  phaseAt = 0;
+}
+
+/* ======================= cards ======================= */
+let cardHide = null;
+function cardState(on){ stage.classList.toggle('card-on', on); }
+function hideCards(){
+  for (const id of ['cheer', 'beerCard', 'diceCard']) document.getElementById(id).classList.remove('show');
+  cardState(false);
+}
+const KIND_KICKER = { rose: '🌹 HOA HỒNG', beer: '🍺 GỌI MÓN', tower: '🍻 ĐẠI MÓN', join: '❤ KHÁCH MỚI' };
+const MENU_FALLBACK = [{ label: 'Bia', coins: 1, icon: '🍺' }, { label: 'Phở', coins: 5, icon: '🍜' }];
+function renderMenu(menu){
+  const box = document.getElementById('menuRows'); box.replaceChildren();
+  for (const item of (menu && menu.length ? menu : MENU_FALLBACK)){
+    const row = document.createElement('div'); row.className = 'mi';
+    const a = document.createElement('span'); a.textContent = `${item.icon || ''} ${item.label}`.trim();
+    const b = document.createElement('b'); b.textContent = `${item.coins} xu`;
+    row.append(a, b); box.append(row);
+  }
+}
+renderMenu();
+function showBeerCard(m){
+  if (m.card === false) return;
+  const order = m.order || { label: `${m.beers} BIA`, text: `${m.beers} bia` };
+  document.getElementById('bcKicker').textContent = KIND_KICKER[m.kind] || 'GỌI MÓN';
+  document.getElementById('bcName').textContent = m.name;
+  document.getElementById('bcAmount').textContent = order.label;
+  document.getElementById('bcTotal').textContent = `đã gọi ${order.text} · tổng ${m.total} xu`;
+  document.getElementById('beerCard').classList.add('show'); cardState(true);
+  clearTimeout(cardHide);
+  cardHide = setTimeout(hideCards, m.beers >= 20 ? 9000 : 5600);
+}
+function showJoinCard(name){
+  document.getElementById('bcKicker').textContent = KIND_KICKER.join;
+  document.getElementById('bcName').textContent = name;
+  document.getElementById('bcAmount').textContent = 'ĐÃ VÀO QUÁN';
+  document.getElementById('bcTotal').textContent = 'Chọn một bàn trống · dzô!';
+  document.getElementById('beerCard').classList.add('show'); cardState(true);
+  clearTimeout(cardHide);
+  cardHide = setTimeout(hideCards, 4200);
+}
+function showCheer(text, sub){
+  document.querySelector('#cheer b').textContent = text || 'CẢ QUÁN DZÔ!';
+  document.getElementById('cheerSub').textContent = sub || 'Một, hai, ba…';
+  document.getElementById('cheer').classList.add('show'); cardState(true);
+  clearTimeout(cardHide);
+  cardHide = setTimeout(hideCards, 4200);
+}
+const PIPS = {
+  1: [[2, 2]], 2: [[1, 1], [3, 3]], 3: [[1, 1], [2, 2], [3, 3]],
+  4: [[1, 1], [3, 1], [1, 3], [3, 3]],
+  5: [[1, 1], [3, 1], [2, 2], [1, 3], [3, 3]],
+  6: [[1, 1], [3, 1], [1, 2], [3, 2], [1, 3], [3, 3]],
+};
+function showDiceCard(m){
+  document.getElementById('dzName').textContent = m.viewer;
+  const box = document.getElementById('dzDice'); box.replaceChildren();
+  for (const value of (m.dice || [1, 1, 1])){
+    const die = document.createElement('div'); die.className = 'die';
+    for (const [r, c] of PIPS[value]){ const pip = document.createElement('i'); pip.style.gridArea = `${r}/${c}`; die.append(pip); }
+    box.append(die);
+  }
+  const lab = document.getElementById('dzLabel'); lab.textContent = m.label; lab.className = 'dz-label ' + (m.class || '');
+  document.getElementById('dzBonus').textContent = m.bonus > 0 ? `Thưởng +${m.bonus} bia` : 'Không thưởng thêm — vẫn vui!';
+  document.getElementById('dzChallenge').textContent = m.challenge || '';
+  document.getElementById('diceCard').classList.add('show'); cardState(true);
+  clearTimeout(cardHide);
+  cardHide = setTimeout(hideCards, 9000);
+}
+
+/* ======================= audio ======================= */
+let AC = null, master = null, sfxBus = null, noiseBuf = null, crowd = null, street = null;
+const player = new BarAudio.MusicPlayer({ manifestUrl: '/assets/music/library.json', storageKey: 'barOverlayMusic', fadeIn: 2.5 });
+document.getElementById('unmute').onclick = e => { e.currentTarget.remove(); startAudio(); };
+function startAudio(){
+  if (AC) return;
+  AC = new (window.AudioContext || window.webkitAudioContext)();
+  master = AC.createGain(); master.gain.value = .9; master.connect(AC.destination);
+  sfxBus = AC.createGain(); sfxBus.gain.value = 1; sfxBus.connect(master);
+  noiseBuf = AC.createBuffer(1, AC.sampleRate * 1.2, AC.sampleRate);
+  const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  crowd = new BarSound.Crowd(AC, master);
+  crowd.start();
+  crowd.setEnabled(settings.ambience !== false);
+  crowd.setLevel(crowdLevel());
+  street = new BarSound.Street(AC, master, { base: '/assets/audio/' });
+  street.start();
+  street.setEnabled(settings.ambience !== false);
+  street.setLevel(crowdLevel());
+  player.attach(AC, master);
+  player.setEnabled(settings.music !== false);
+  player.setVolume((Number(settings.musicVolume) || 50) / 100);
+  player.start();
+  sfxClink();
+}
+function duck(on){ player.duck(on); crowd?.duck(on); street?.duck(on); }
+function noise(t, dur, freq, q, gain){
+  if (!AC) return;
+  const src = AC.createBufferSource(); src.buffer = noiseBuf;
+  const bp = AC.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = freq; bp.Q.value = q;
+  const g = AC.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(gain, t + .012); g.gain.exponentialRampToValueAtTime(.0008, t + dur);
+  src.connect(bp); bp.connect(g); g.connect(sfxBus); src.start(t); src.stop(t + dur + .05);
+}
+function ping(t, freq, dur, gain){
+  if (!AC) return;
+  const o = AC.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(freq, t);
+  const g = AC.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(gain, t + .008); g.gain.exponentialRampToValueAtTime(.0005, t + dur);
+  o.connect(g); g.connect(sfxBus); o.start(t); o.stop(t + dur + .05);
+}
+const sfxOn = () => settings.sfx !== false;
+function sfxClink(big){
+  if (!AC || !sfxOn()) return; const t = AC.currentTime;
+  ping(t, big ? 1580 : 1980, .38, .18); ping(t + .035, big ? 2240 : 2680, .3, .12);
+  noise(t, .07, 3200, 2.5, .07);
+}
+function sfxPour(){ if (!AC || !sfxOn()) return; const t = AC.currentTime; noise(t, .55, 1400, 1.1, .12); noise(t + .1, .4, 2400, 1.4, .07); }
+function sfxDice(){ if (!AC || !sfxOn()) return; const t = AC.currentTime; for (let i = 0; i < 7; i++) noise(t + i * .055, .06, 1800 + Math.random() * 1800, 3, .08); }
+function sfxCheer(){ if (!AC || !sfxOn()) return; const t = AC.currentTime; sfxClink(true); ping(t + .08, 660, .5, .06); ping(t + .12, 880, .5, .05); ping(t + .16, 1320, .45, .045); crowd?.cheer(1); }
+const ttsQ = []; let ttsPlaying = false;
+function queueTTS(url, rate){ ttsQ.push({ url, rate }); playTTS(); }
+function playTTS(){
+  if (ttsPlaying || !ttsQ.length || !AC) return;
+  ttsPlaying = true;
+  const { url, rate } = ttsQ.shift();
+  const el = new Audio(url);
+  const src = AC.createMediaElementSource(el);
+  const g = AC.createGain(); g.gain.value = 1.25;
+  src.connect(g); g.connect(master);
+  el.playbackRate = Math.max(.5, Math.min(1.5, 1 + (+rate || 0) / 100));
+  el.onplay = () => duck(true);
+  el.onended = el.onerror = () => { duck(false); ttsPlaying = false; setTimeout(playTTS, 350); };
+  el.play().catch(() => { ttsPlaying = false; });
+}
+
+/* ======================= effects ======================= */
+const fx = [], particles = [];
+function beerFx(v, beers, order){
+  v.glow = 1; v.cheer = 1; v.sip = 1; v.nextSip = 8 + Math.random() * 10;
+  const s = v.seat.scale;
+  const y = v.side === 'far' ? v.y - 250 * s : v.y - 300 * s;
+  const phoOnly = order && order.bia === 0 && order.pho > 0;
+  if (phoOnly){
+    const n = Math.min(4, order.pho);
+    for (let i = 0; i < n; i++) particles.push({ type: 'steam', x: v.x + (v.side === 'far' ? 0 : 40 * s) + (i - (n - 1) / 2) * 52 * s, y: y - 10, vx: (Math.random() - .5) * 18, vy: -(18 + Math.random() * 26), t: 0, life: 2.2 + Math.random(), s: .8 + Math.random() * .6 });
+    for (let i = 0; i < n; i++) fx.push({ kind: 'bowl', x: v.x + (v.side === 'far' ? 0 : 40 * s) + (i - (n - 1) / 2) * 52 * s, y, t: 0, life: 2.2, s: s * 1.15 });
+  } else {
+    fx.push({ kind: 'mug', x: v.x + (v.side === 'far' ? 0 : 40 * s), y, t: 0, life: beers >= 20 ? 2.9 : 2, s: s * (beers >= 20 ? 1.8 : 1.2), tilt: (Math.random() - .5) * .35 });
+    const n = Math.min(30, 6 + beers * 2);
+    for (let i = 0; i < n; i++) particles.push({ type: 'foam', x: v.x + (Math.random() - .5) * 80 * s, y: y - 10, vx: (Math.random() - .5) * 45, vy: -(50 + Math.random() * 90), t: 0, life: 1.4 + Math.random(), s: .6 + Math.random() * .9 });
+  }
+  if (beers >= 20){
+    sfxCheer(); street?.cheer();
+    for (let i = 0; i < 32; i++) particles.push({ type: 'hop', x: 540 + (Math.random() - .5) * 660, y: 260 + Math.random() * 340, vx: (Math.random() - .5) * 50, vy: 40 + Math.random() * 70, t: 0, life: 5, s: .55 + Math.random() * .55, rot: Math.random() * 6 });
+    for (const x of visitors.values()) x.cheer = Math.max(x.cheer, .7);
+  } else { sfxPour(); if (beers >= 5) sfxClink(); }
+  sfxClink(beers >= 20);
+}
+function showBubble(v, text){ v.bubble = { text, until: performance.now() + 6000 }; v.cheer = .7; }
+
+/* ======================= server link ======================= */
+let ws = null;
+function connect(){
+  ws = new WebSocket(`ws://${location.host}/ws?role=overlay`);
+  const st = document.getElementById('conn');
+  ws.onopen = () => { st.textContent = ''; };
+  ws.onclose = () => { st.textContent = 'mất kết nối server… đang thử lại'; setTimeout(connect, 2000); };
+  ws.onmessage = e => {
+    const m = JSON.parse(e.data);
+    switch (m.t){
+      case 'state':
+        Object.assign(settings, m.settings);
+        applySettings();
+        startedAt = m.startedAt || Date.now();
+        visitors.clear();
+        relayout(m.cap || 24);
+        for (const p of m.viewers) addVisitor(p, true);
+        totalBeers = Number.isFinite(m.barBeers) ? m.barBeers : sumBeers();
+        renderMenu(m.menu);
+        updateCount(); updateTotal(); renderMerit(); break;
+      case 'settings':
+        Object.assign(settings, m.settings); applySettings();
+        if (m.cap && m.cap !== cap) relayout(m.cap);
+        break;
+      case 'join': if (m.cap && m.cap !== cap) relayout(m.cap); addVisitor(m.v, !!m.v.demo); updateCount(); renderMerit(); break;
+      case 'leave': removeVisitor(m.id); break;
+      case 'skin': { const v = visitors.get(m.id); if (v){ v.skin = m.skin; v.glow = .8; } break; }
+      case 'chat': { const v = visitors.get(m.id); if (v) showBubble(v, m.text); break; }
+      case 'beer': {
+        const v = visitors.get(m.id);
+        if (v){
+          v.beers = m.total;
+          if (m.card !== false){ beerFx(v, m.beers, m.order); showBubble(v, `đã gọi ${(m.order && m.order.text) || (m.beers + ' bia')}`); }
+        }
+        totalBeers = Number.isFinite(m.barBeers) ? m.barBeers : totalBeers + (m.beers || 0);
+        renderMerit(); updateTotal(); showBeerCard(m);
+        break;
+      }
+      case 'dice': {
+        const v = visitors.get(m.id);
+        if (v){ v.beers = m.total; beerFx(v, Math.max(1, m.gained || m.bonus || 0)); }
+        totalBeers = Number.isFinite(m.barBeers) ? m.barBeers : totalBeers + (m.bonus || 0);
+        renderMerit(); updateTotal(); showDiceCard(m); sfxDice();
+        break;
+      }
+      case 'cheer': {
+        const v = visitors.get(m.id);
+        if (v){ v.cheer = 1; v.glow = .8; if (v.sip <= 0) v.sip = 1; }
+        const global = m.global || !m.id;
+        showCheer(global ? 'CẢ QUÁN DZÔ!' : 'DZÔ!', global ? 'Một, hai, ba…' : (v ? v.name : ''));
+        sfxCheer();
+        if (global) street?.cheer();
+        break;
+      }
+      case 'toast': showCheer(m.text || 'CẢ QUÁN DZÔ!', m.sub || 'Một, hai, ba…'); sfxCheer(); street?.cheer(); for (const x of visitors.values()) x.cheer = 1; break;
+      case 'follow': showJoinCard(m.name); sfxClink(); break;
+      case 'like': {
+        const v = visitors.get(m.id);
+        if (v) for (let i = 0; i < Math.min(6, m.n); i++) particles.push({ type: 'heart', x: v.x + (Math.random() - .5) * 60, y: v.y - 220 * v.seat.scale, vx: (Math.random() - .5) * 20, vy: -(50 + Math.random() * 40), t: 0, life: 1.6, s: 1 });
+        break;
+      }
+      case 'tts': queueTTS(m.url, m.rate); break;
+    }
+  };
+}
+const sumBeers = () => { let n = 0; for (const v of visitors.values()) n += v.beers || 0; return n; };
+connect();
+
+/* ======================= render ======================= */
+const ctx = document.getElementById('c').getContext('2d');
+const glowCv = document.createElement('canvas'); glowCv.width = glowCv.height = 400;
+{ const g = glowCv.getContext('2d'), grd = g.createRadialGradient(200, 200, 10, 200, 200, 200); grd.addColorStop(0, 'rgba(255,200,110,.95)'); grd.addColorStop(1, 'rgba(255,160,60,0)'); g.fillStyle = grd; g.fillRect(0, 0, 400, 400); }
+function drawGlow(x, y, s, a){ ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a; ctx.drawImage(glowCv, x - 200 * s, y - 200 * s, 400 * s, 400 * s); ctx.restore(); }
+
+/* background crossfade is cached; it only changes while the two phases mix.
+   The ambient lights are cheap enough to refresh a few times a second, not every frame. */
+const bgCv = document.createElement('canvas'); bgCv.width = 1080; bgCv.height = 1920;
+const bgG = bgCv.getContext('2d');
+let bgAt = -1, bgAmbAt = -1;
+for (const im of [A.light, A.dark]) im.addEventListener('load', () => { bgAt = -1; });
+function background(mix, t){
+  if (bgAt >= 0 && Math.abs(bgAt - mix) < .004 && t - bgAmbAt < .1) return bgCv;
+  bgAt = mix; bgAmbAt = t;
+  bgG.clearRect(0, 0, 1080, 1920);
+  if (A.light.naturalWidth) bgG.drawImage(A.light, 0, 0, 1080, 1920);
+  else { bgG.fillStyle = '#0a101c'; bgG.fillRect(0, 0, 1080, 1920); }
+  if (mix > .001 && A.dark.naturalWidth){ bgG.globalAlpha = mix; bgG.drawImage(A.dark, 0, 0, 1080, 1920); bgG.globalAlpha = 1; }
+  SC.drawAmbient(bgG, mix, t);
+  return bgCv;
+}
+
+const furnCache = new Map();
+function furnFor(tb, kind){
+  const key = tb.id + '|' + activity + '|' + kind;
+  let e = furnCache.get(key);
+  if (e) return e;
+  const s = tb.scale, w = tb.w, d = tb.depth;
+  const x0 = Math.floor(tb.cx - w * .66 - 24), x1 = Math.ceil(tb.cx + w * .66 + 24);
+  const y0 = Math.floor(tb.y - d - 120 * s), y1 = Math.ceil(tb.y + (kind === 'chair' ? 24 + 150 * s : 40));
+  const cv = document.createElement('canvas'); cv.width = Math.max(1, x1 - x0); cv.height = Math.max(1, y1 - y0);
+  const g = cv.getContext('2d'); g.translate(-x0, -y0);
+  if (kind === 'chair'){ for (const seat of tb.nearSeats) SC.drawChairBack(g, seat); }
+  else SC.drawTable(g, tb, activity, 0);
+  e = { cv, x: x0, y: y0 };
+  if (furnCache.size > 80) furnCache.clear();
+  furnCache.set(key, e);
+  return e;
+}
+
+/* Name tags are rasterised once into an offscreen canvas keyed by size, style,
+   avatar and beer count, then blitted; only positions change every frame. */
+const tagMeta = new Map(), tagCache = new Map(), bubbleCache = new Map();
+const avIds = new WeakMap(); let avSeq = 0;
+function avId(im){ let id = avIds.get(im); if (!id) avIds.set(im, id = ++avSeq); return id; }
+document.fonts?.ready.then(() => { tagMeta.clear(); tagCache.clear(); bubbleCache.clear(); });
+function tagBit(text, s, style, av, maxW, beers){
+  const fs = Math.max(15, Math.round(26 * s / .45)), pad = fs * .42;
+  const ct = beers > 0 ? '×' + beers : '';
+  const mkey = fs + '|' + (maxW || 0) + '|' + (av ? 1 : 0) + '|' + text + '|' + ct;
+  let meta = tagMeta.get(mkey);
+  if (!meta){
+    let t = text, aw = av ? fs * 1.15 : 0, useAv = !!av;
+    if (maxW && aw && maxW < fs * 8){ aw = 0; useAv = false; }
+    ctx.font = `700 ${fs}px "Be Vietnam Pro",system-ui,sans-serif`;
+    if (maxW){ const chipW = ct ? fs * 1.6 : 0; while (t.length > 2 && ctx.measureText(t).width + pad * 2 + aw + chipW > maxW) t = t.slice(0, -1); if (t !== text) t = t.trimEnd() + '…'; }
+    meta = { t, useAv, aw, w: ctx.measureText(t).width + pad * 2 + aw + (ct ? fs * 1.5 : 0) };
+    if (tagMeta.size > 800) tagMeta.clear();
+    tagMeta.set(mkey, meta);
+  }
+  const id = meta.useAv ? avId(av) : 0, key = fs + '|' + id + '|' + style + '|' + meta.t + '|' + ct;
+  let bit = tagCache.get(key);
+  if (!bit){
+    const w = Math.ceil(meta.w), h = Math.ceil(fs * 1.55), aw = meta.aw;
+    const cv = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(w, h) : Object.assign(document.createElement('canvas'), { width: w, height: h });
+    const g = cv.getContext('2d');
+    g.font = `700 ${fs}px "Be Vietnam Pro",system-ui,sans-serif`;
+    g.fillStyle = style === 'gold' ? 'rgba(120,58,10,.94)' : 'rgba(8,14,26,.74)';
+    BeerFX.roundRect(g, 0, 0, w, h, h / 2); g.fill();
+    g.lineWidth = style === 'gold' ? 3 : 1.5;
+    g.strokeStyle = style === 'gold' ? '#ffcf72' : 'rgba(255,181,69,.55)'; g.stroke();
+    if (id && av){ const cx = pad * .55 + aw / 2, cy = h / 2; g.save(); g.beginPath(); g.arc(cx, cy, fs * .5, 0, 6.29); g.clip(); g.drawImage(av, cx - fs * .5, cy - fs * .5, fs, fs); g.restore(); }
+    g.fillStyle = style === 'gold' ? '#ffe7b0' : '#f8efdd';
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(meta.t, w / 2 + aw / 2 - (ct ? fs * .9 : 0), h / 2 + 1);
+    if (ct){
+      g.font = `800 ${Math.round(fs * .8)}px "Be Vietnam Pro",system-ui,sans-serif`;
+      g.fillStyle = '#ffcf72'; g.textAlign = 'right';
+      g.fillText(ct, w - pad, h / 2 + 1);
+    }
+    bit = { cv, w, h };
+    if (tagCache.size > 400) tagCache.clear();
+    tagCache.set(key, bit);
+  }
+  return bit;
+}
+function bubble(text, x, y, s){
+  const fs = Math.max(18, Math.round(26 * s / .45));
+  ctx.font = `500 ${fs}px "Be Vietnam Pro",system-ui,sans-serif`;
+  const key = fs + '|' + text;
+  let hit = bubbleCache.get(key);
+  if (!hit){
+    let t = text; while (ctx.measureText(t).width > 340 && t.length > 4) t = t.slice(0, -2);
+    if (t !== text) t = t.trimEnd() + '…';
+    hit = { t, w: ctx.measureText(t).width + fs * 1.1 };
+    if (bubbleCache.size > 300) bubbleCache.clear();
+    bubbleCache.set(key, hit);
+  }
+  const t = hit.t, w = hit.w, h = fs * 1.6;
+  ctx.fillStyle = 'rgba(255,247,230,.96)'; BeerFX.roundRect(ctx, x - w / 2, y - h, w, h, fs * .5); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x - 8, y); ctx.lineTo(x + 8, y); ctx.lineTo(x, y + 10); ctx.fill();
+  ctx.fillStyle = '#3a1a08'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(t, x, y - h / 2 + 1);
+}
+
+/* ---------- guests ---------- */
+function drawSeated(v, tSec){
+  const s = v.seat.scale;
+  const key = SC.activityKey(v.skin, v.activity, v.side);
+  const old = v.lastActivity ? SC.activityKey(v.skin, v.lastActivity, v.side) : null;
+  const jump = v.cheer > 0 ? Math.sin(Math.min(1, v.cheer) * Math.PI) * 14 * s : 0;
+  const bob = v.cheer > .05 ? 0 : Math.sin(tSec * 1.15 + v.phase) * 1.4 * s;
+  const sip = v.sip > 0 ? Math.sin((1 - v.sip) * Math.PI) * 3.5 * s : 0;
+  if (v.glow > 0 || v.beers >= 99) drawGlow(v.x, v.y - 200 * s, s * 1.15, Math.max(v.glow * .7, v.beers >= 99 ? .32 + .08 * Math.sin(tSec * 1.7) : 0));
+  const y = v.y + bob + sip - jump;
+  ctx.save();
+  if (old && v.poseMix < 1){
+    ctx.globalAlpha = v.fade * (1 - v.poseMix); SP.draw(ctx, old, v.x, y, s);
+  }
+  ctx.globalAlpha = v.fade * (old ? v.poseMix : 1);
+  const tilt = v.cheer > .05 ? Math.sin(tSec * 18 + v.phase) * .012 : 0;
+  if (tilt){ ctx.translate(v.x, y); ctx.rotate(tilt); ctx.translate(-v.x, -y); }
+  SP.draw(ctx, key, v.x, y, s);
+  ctx.restore();
+  if (v.side === 'near' && v.activity === 'beer' && v.sip > 0){
+    const k = Math.sin((1 - v.sip) * Math.PI);
+    SC.drawMug(ctx, v.x + 62 * s, v.y - 236 * s - k * 26 * s, .55 * s);
+  }
+}
+function drawWalker(v, tSec){
+  const s = v.seat.scale;
+  const bob = Math.abs(Math.sin(v.walkPhase)) * 4 * s;
+  if (v.glow > 0) drawGlow(v.x, v.y - 400 * s, s * 1.2, v.glow * .55);
+  ctx.save(); ctx.globalAlpha = v.fade;
+  SP.draw(ctx, SC.walkKey(v.skin), v.x, v.y - bob, s);
+  ctx.restore();
+}
+
+let last = performance.now(), frameMs = 16, quality = 1, slowT = 0, fastT = 0, debugEl = null, fpsFrames = 0, fpsAt = performance.now();
+const DEBUG = new URLSearchParams(location.search).has('debug');
+if (DEBUG){ debugEl = document.createElement('div'); debugEl.style.cssText = 'position:fixed;left:8px;top:8px;z-index:99;font:12px ui-monospace,monospace;color:#ffd98a;background:#000a;padding:4px 8px;border-radius:6px'; document.body.append(debugEl); }
+
+const tableGuests = new Map();
+function frame(now){
+  requestAnimationFrame(frame);
+  if (document.hidden){ last = now; return; }
+  const raw = now - last, dt = Math.min(raw / 1000, .05); last = now; const t = now / 1000;
+  frameMs = frameMs * .9 + Math.min(raw, 100) * .1;
+  if (frameMs > 24){ slowT += dt; fastT = 0; } else if (frameMs < 19){ fastT += dt; slowT = 0; }
+  if (slowT > 2){ quality = Math.max(.55, quality - .15); slowT = 0; } else if (fastT > 8 && quality < 1){ quality = Math.min(1, quality + .15); fastT = 0; }
+  fpsFrames++;
+  if (DEBUG && now - fpsAt > 500){ debugEl.textContent = `${Math.round(fpsFrames * 1000 / (now - fpsAt))} fps · ${frameMs.toFixed(1)} ms · ${visitors.size} người · ${totalBeers} ly · ${activity}`; fpsFrames = 0; fpsAt = now; }
+
+  tickPhase(now);
+  night += (nightTarget - night) * Math.min(1, dt * 1.8);
+  if (Math.abs(night - nightTarget) < .002) night = nightTarget;
+
+  /* --- update --- */
+  for (const v of visitors.values()){
+    v.fade = Math.min(1, v.fade + dt * 2.4);
+    v.pop = Math.min(1, v.pop + dt * 2.6);
+    v.glow = Math.max(0, v.glow - dt * .45);
+    v.cheer = Math.max(0, v.cheer - dt * .8);
+    if (v.poseMix < 1) v.poseMix = Math.min(1, v.poseMix + dt * 1.8);
+    if (v.state === 'sit'){
+      if (v.sip > 0) v.sip = Math.max(0, v.sip - dt / 1.7);
+      else if ((v.nextSip -= dt) <= 0 && !v.leaving){ v.sip = 1; v.nextSip = 8 + Math.random() * 14; }
+    } else if (v.state === 'walk' || v.state === 'leave'){
+      v.walkPhase += dt * 9;
+      const p = v.path[0];
+      if (!p){
+        if (v.state === 'leave') visitors.delete(v.id);
+        else { v.state = 'sit'; v.x = v.seat.x; v.y = v.seat.y; v.pop = 0; v.poseMix = 1; v.lastActivity = null; v.activity = activity; }
+        continue;
+      }
+      const dx = p.x - v.x, dy = p.y - v.y, d = Math.hypot(dx, dy), step = v.speed * dt;
+      if (d <= step){
+        v.x = p.x; v.y = p.y; v.path.shift();
+        if (!v.path.length){
+          if (v.state === 'leave') visitors.delete(v.id);
+          else { v.state = 'sit'; v.x = v.seat.x; v.y = v.seat.y; v.pop = 0; v.poseMix = 1; v.lastActivity = null; v.activity = activity; }
+        }
+      } else { v.x += dx / d * step; v.y += dy / d * step; }
+      if (v.state === 'leave' && v.path.length === 1) v.fade = Math.max(0, v.fade - dt * 1.1);
+    } else if (v.state === 'fadeout'){
+      v.fade = Math.max(0, v.fade - dt * 1.6);
+      if (v.fade <= 0) visitors.delete(v.id);
+    }
+  }
+
+  /* --- paint --- */
+  ctx.clearRect(0, 0, 1080, 1920);
+  const bg = background(night, t);
+  ctx.drawImage(bg, 0, 0);
+
+  tableGuests.clear();
+  for (const tb of tables) tableGuests.set(tb, { far: [], near: [] });
+  for (const v of visitors.values()){
+    if (v.state !== 'sit' || !v.seat) continue;
+    const g2 = tableGuests.get(v.seat.table);
+    if (g2) g2[v.seat.side].push(v);
+  }
+  const groups = [];
+  for (const tb of tables){
+    const g2 = tableGuests.get(tb);
+    groups.push({ y: tb.y, draw: () => {
+      for (const v of g2.far) drawSeated(v, t);
+      if (tb.kind === 'image'){
+        // Restore the painted tabletop over the far guests' waist, then add
+        // the day/night props on top of the backdrop's own food.
+        const p = tb.patch;
+        ctx.drawImage(bg, p.x, p.y, p.w, p.h, p.x, p.y, p.w, p.h);
+        if (g2.far.length || g2.near.length) SC.drawProps(ctx, tb, activity, t);
+      } else {
+        const f = furnFor(tb, 'table');
+        ctx.drawImage(f.cv, f.x, f.y);
+      }
+      for (const v of g2.near) drawSeated(v, t);
+      const ch = furnFor(tb, 'chair');
+      ctx.drawImage(ch.cv, ch.x, ch.y);
+    } });
+  }
+  for (const v of visitors.values()){
+    if (v.state === 'walk' || v.state === 'leave') groups.push({ y: v.y, draw: () => drawWalker(v, t) });
+  }
+  groups.sort((a, b) => a.y - b.y);
+  for (const g2 of groups) g2.draw();
+
+  /* --- tags + bubbles --- */
+  const bubbles = [], tagList = [];
+  for (const v of visitors.values()){
+    if (v.fade <= .05) continue;
+    const s = v.seat.scale;
+    const walking = v.state === 'walk' || v.state === 'leave';
+    const key = walking ? SC.walkKey(v.skin) : SC.activityKey(v.skin, v.activity, v.side);
+    const ty = v.y - spriteH(key) * s - 12 * s;
+    const maxW = Math.max(110, Math.min(250, v.seat.gap * .8));
+    const bit = tagBit(v.name, s, v.beers >= 99 ? 'gold' : '', avatar(v.avatar), maxW, cap <= 24 ? v.beers : 0);
+    const pri = (v.isMe ? 1e9 : 0) + (v.bubble ? 1e8 : 0) + (v.glow > .2 ? 1e7 : 0) + v.y * 10 + v.beers;
+    tagList.push({ v, bit, x: v.x, y: ty, s, pri });
+  }
+  // Tags are drawn front-first and skip any that would overlap: at 24+ guests a wall of
+  // name plates hides the whole yard.
+  tagList.sort((a, b) => b.pri - a.pri);
+  const placed = [];
+  for (const t of tagList){
+    const x = Math.max(t.bit.w / 2 + 6, Math.min(1080 - t.bit.w / 2 - 6, t.x));
+    const r = { x: x - t.bit.w / 2 - 3, y: t.y - t.bit.h / 2 - 3, w: t.bit.w + 6, h: t.bit.h + 6 };
+    if (placed.some(o => r.x < o.x + o.w && o.x < r.x + r.w && r.y < o.y + o.h && o.y < r.y + r.h)) continue;
+    ctx.drawImage(t.bit.cv, Math.round(x - t.bit.w / 2), Math.round(t.y - t.bit.h / 2));
+    placed.push(r);
+    if (t.v.bubble && now < t.v.bubble.until) bubbles.push([t.v.bubble.text, x, t.y - Math.max(18, 30 * t.s), t.s]);
+    else t.v.bubble = null;
+  }
+  for (const b of bubbles) bubble(...b);
+
+  /* --- gift fx --- */
+  for (let i = fx.length - 1; i >= 0; i--){
+    const f = fx[i]; f.t += dt; const k = f.t / f.life;
+    if (k >= 1){ fx.splice(i, 1); continue; }
+    const pop = 1 - Math.pow(1 - Math.min(1, f.t * 4), 3);
+    ctx.save(); ctx.globalAlpha = k < .75 ? 1 : (1 - k) / .25;
+    if (f.kind === 'bowl') SC.drawBowl(ctx, f.x, f.y - k * 160, f.s * (.6 + .4 * pop), true, t);
+    else BeerFX.mug(ctx, f.x, f.y - k * 200, f.s * (.6 + .4 * pop), { tilt: f.tilt, fill: 1 });
+    ctx.restore();
+  }
+  for (let i = particles.length - 1; i >= 0; i--){
+    const p = particles[i]; p.t += dt; if (p.t > p.life){ particles.splice(i, 1); continue; }
+    p.x += p.vx * dt + Math.sin(p.t * 3 + i) * 18 * dt; p.y += p.vy * dt;
+    ctx.save(); ctx.globalAlpha = Math.min(1, p.life - p.t);
+    if (p.type === 'foam'){
+      ctx.globalAlpha *= .9; ctx.fillStyle = '#fffaf0';
+      ctx.beginPath(); ctx.arc(p.x, p.y, 5 * p.s, 0, 6.29); ctx.fill();
+    } else if (p.type === 'steam'){
+      SC.drawSteam(ctx, p.x, p.y, p.s, t, Math.min(.8, (p.life - p.t) * .5));
+    } else if (p.type === 'heart'){
+      ctx.fillStyle = '#ff5a7a'; ctx.font = '34px serif'; ctx.textAlign = 'center'; ctx.fillText('♥', p.x, p.y);
+    } else {
+      BeerFX.hop(ctx, p.x, p.y, p.s, (p.rot || 0) + p.t * 1.6, 1);
+    }
+    ctx.restore();
+  }
+}
+const init = SC.phaseInfo(settings);
+night = nightTarget = init.night;
+setPhase(init);
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
